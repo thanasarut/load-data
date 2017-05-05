@@ -176,8 +176,12 @@ public class Application {
                                 _market.getRoom().forEach(_periodRate -> {
                                     BaseRate baseRate = new BaseRate();
                                     baseRate.setMarket(_market.getMarket());
-                                    baseRate.setFromDate(transformOldDateToString(_periodRate.getValid_period().get("from")));
-                                    baseRate.setToDate(transformOldDateToString(_periodRate.getValid_period().get("to")));
+                                    if (_periodRate.getValid_period() != null) {
+                                        baseRate.setFromDate(transformOldDateToString(_periodRate.getValid_period().get("from")));
+                                        baseRate.setToDate(transformOldDateToString(_periodRate.getValid_period().get("to")));
+                                    } else {
+                                        // not found valid_period --> have only period that is very old data, martin confirm to not load to v.3
+                                    }
                                     baseRate.setWeekdays(_periodRate.getValidDay());
                                     baseRate.setRoomRate(String.format("%1$.2f",_periodRate.getAmount().getSatang()/100.0));
                                     baseRate.setCurrencyCode(_periodRate.getAmount().getCurrency());
@@ -277,7 +281,6 @@ public class Application {
                                 if (_backendHotel.getRoomClasses() != null) {
                                     List<RoomClass> roomClassList = new ArrayList<>();
                                     Integer _rcm_counter = 0;
-                                    //_backendHotel.getRoomClasses().forEach(_roomClasses -> {
                                     for (Map<String, Object> _roomClasses : _backendHotel.getRoomClasses()) {
                                         _rcm_counter++;
                                         RoomClass roomClass = new RoomClass();
@@ -306,17 +309,17 @@ public class Application {
                                                     roomClass.setMixAdultAndChildInRoom(false);
                                                 }
                                                 // set child policy for each room class
-                                                // TODO :: need to continue modify
                                                 if (_backendHotel.getChildPolicy() != null) {
                                                     Map<String, Object> _max_child = new Gson().fromJson(new Gson().toJson(_backendHotel.getChildPolicy().get("maximum_children")), Map.class);
                                                     Map<String, Object> _self = new Gson().fromJson(new Gson().toJson(_max_child.get("self")), Map.class);
                                                     if (_self.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d",_rcm_counter)) != null) {
                                                         roomClass.setMaxChild(convertObjectToInt(_self.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter))).toString());
                                                     } else {
-                                                        // TODO :: need to ask jack to confirm again.
+                                                        // jack confirm that if have 0-set or not-set means 0 --> not allow children in that room_class
+                                                        roomClass.setMaxChild("0");
                                                     }
                                                 } else {
-                                                    // TODO :: need to ask jack to confirm again.
+                                                    // if v.2 not specify any child_policy no need to do anything for v.3
                                                 }
                                                 roomClass.setOrder(0);
                                             }
