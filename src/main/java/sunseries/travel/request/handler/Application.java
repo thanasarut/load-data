@@ -311,12 +311,21 @@ public class Application {
                                                 // set child policy for each room class
                                                 if (_backendHotel.getChildPolicy() != null) {
                                                     Map<String, Object> _max_child = new Gson().fromJson(new Gson().toJson(_backendHotel.getChildPolicy().get("maximum_children")), Map.class);
-                                                    Map<String, Object> _self = new Gson().fromJson(new Gson().toJson(_max_child.get("self")), Map.class);
-                                                    if (_self.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d",_rcm_counter)) != null) {
-                                                        roomClass.setMaxChild(convertObjectToInt(_self.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter))).toString());
+                                                    if (_max_child.get("self") != null) {
+                                                        Map<String, Object> _self = new Gson().fromJson(new Gson().toJson(_max_child.get("self")), Map.class);
+                                                        if (_self.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter)) != null) {
+                                                            roomClass.setMaxChild(convertObjectToInt(_self.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter))).toString());
+                                                        } else {
+                                                            // jack confirm that if have 0-set or not-set means 0 --> not allow children in that room_class
+                                                            roomClass.setMaxChild("0");
+                                                        }
                                                     } else {
-                                                        // jack confirm that if have 0-set or not-set means 0 --> not allow children in that room_class
-                                                        roomClass.setMaxChild("0");
+                                                        if (_max_child.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter)) != null) {
+                                                            roomClass.setMaxChild(convertObjectToInt(_max_child.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter))).toString());
+                                                        } else {
+                                                            // jack confirm that if have 0-set or not-set means 0 --> not allow children in that room_class
+                                                            roomClass.setMaxChild("0");
+                                                        }
                                                     }
                                                 } else {
                                                     // if v.2 not specify any child_policy no need to do anything for v.3
