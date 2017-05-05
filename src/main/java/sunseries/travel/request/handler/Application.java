@@ -466,7 +466,7 @@ public class Application {
     private static Integer convertObjectToInt(Object numberKeepAsString) {
         Integer returnInt = 0;
         if (numberKeepAsString.toString() != null) {
-            returnInt = (int)Float.parseFloat(numberKeepAsString.toString());
+            returnInt = (int)Float.parseFloat(numberKeepAsString.toString().replaceAll("`",""));
         }
         return returnInt;
     }
