@@ -10,6 +10,7 @@ import com.mashape.unirest.http.exceptions.UnirestException;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.util.StringUtils;
 import sun.awt.image.ImageWatched;
+import sun.util.resources.cldr.ro.CalendarData_ro_MD;
 import sunseries.travel.request.handler.message.*;
 
 import java.io.*;
@@ -29,10 +30,10 @@ public class Application {
         String serverPort = "8080";
 
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/hotelMetadata.sort.csv";
-        //String fileName = "/Users/thanasarut/sunseries/source_load_data/backend_hotel.csv";
+        String fileName = "/Users/thanasarut/sunseries/source_load_data/backend_hotel.csv";
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/room_rate.sort.csv";
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/temp.csv";
-        String fileName = "/Users/vick.thanasarut/sunseries/data_abook_127.0.0.1.csv";
+        //String fileName = "/Users/vick.thanasarut/sunseries/data_abook_127.0.0.1.csv";
 
         // Pattern of Hotel Metadata -- It will start with "sunsXXXX" hotel_id
         String hotelMetaDataRegEx = "^suns[0-9]";
@@ -275,56 +276,70 @@ public class Application {
                             if (hotel.getRoomClasses() == null || hotel.getRoomClasses().size() == 0) {
                                 if (_backendHotel.getRoomClasses() != null) {
                                     List<RoomClass> roomClassList = new ArrayList<>();
-                                    _backendHotel.getRoomClasses().forEach(_roomClasses -> {
-                                        // in case that never load data of room classes to new version
+                                    Integer _rcm_counter = 0;
+                                    //_backendHotel.getRoomClasses().forEach(_roomClasses -> {
+                                    for (Map<String, Object> _roomClasses : _backendHotel.getRoomClasses()) {
+                                        _rcm_counter++;
                                         RoomClass roomClass = new RoomClass();
+                                        if (_roomClasses.get("id").equals("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d",_rcm_counter))) {
+                                            // in case that never load data of room classes to new version
 
-                                        roomClass.setRoomClassName(_roomClasses.get("name").toString());
-                                        // TODO : in case that room_classes not specify MaxOcc --> jack will help to fill in again.
-                                        if (_roomClasses.get("max_occupancy_without_extra_bed") == null ||
-                                                _roomClasses.get("max_occupancy_with_extra_bed") == null ||
-                                                _roomClasses.get("max_adults_with_extra_bed") == null) {
-                                            roomClass.setMaxOccupancyExcludeExtraBed("0");
-                                            roomClass.setMaxOccupancyIncludeExtraBed("0");
-                                            roomClass.setMaxAdultIncludeExtraBed("0");
-                                            roomClass.setMixAdultAndChildInRoom(false);
-                                            roomClass.setMaxChild("0");
-                                            roomClass.setOrder(0);
-                                            hotelWhichNotSpecifyBedTypeOrMaxOccu.add(_roomClasses.get("id").toString());
-                                        } else {
-                                            roomClass.setMaxOccupancyExcludeExtraBed(convertObjectToInt(_roomClasses.get("max_occupancy_without_extra_bed")).toString());
-                                            roomClass.setMaxOccupancyIncludeExtraBed(convertObjectToInt(_roomClasses.get("max_occupancy_with_extra_bed")).toString());
-                                            roomClass.setMaxAdultIncludeExtraBed(convertObjectToInt(_roomClasses.get("max_adults_with_extra_bed")).toString());
-                                            if (_roomClasses.get("mix_adults_children_extra_bed") != null) {
-                                                roomClass.setMixAdultAndChildInRoom(Boolean.parseBoolean(_roomClasses.get("mix_adults_children_extra_bed").toString()));
-                                            } else {
+                                            roomClass.setRoomClassName(_roomClasses.get("name").toString());
+                                            // TODO : in case that room_classes not specify MaxOcc --> jack will help to fill in again.
+                                            if (_roomClasses.get("max_occupancy_without_extra_bed") == null ||
+                                                    _roomClasses.get("max_occupancy_with_extra_bed") == null ||
+                                                    _roomClasses.get("max_adults_with_extra_bed") == null) {
+                                                roomClass.setMaxOccupancyExcludeExtraBed("0");
+                                                roomClass.setMaxOccupancyIncludeExtraBed("0");
+                                                roomClass.setMaxAdultIncludeExtraBed("0");
                                                 roomClass.setMixAdultAndChildInRoom(false);
-                                            }
-                                            // set child policy for each room class
-                                            // TODO :: need to continue modify
-                                            /*if (_backendHotel.getChildPolicy() != null) {
-                                                Map<String, Object> _max_child = new Gson().fromJson(new Gson().toJson(_backendHotel.getChildPolicy().get("maximum_children")), Map.class);
-                                                Map<String, String> _self = new Gson().fromJson(new Gson().toJson(_max_child.get("self")), Map.class);
-                                                roomClass.setMaxChild(_self.get("backend_hotel::bess-" + roomClass.getRoomClassId()).toString());
-                                            }*/
-                                            roomClass.setOrder(0);
-                                        }
-                                        // TODO : some hotel not specify bedtype or maxOccu-- list in log.
-                                        List<BedType> bedTypeList = new ArrayList<>();
-                                        if (_roomClasses.get("room_configurations") != null) {
-                                            ((List<Map<String, Object>>) _roomClasses.get("room_configurations")).forEach(_roomConfiguration -> {
-                                                bedTypeList.add(new BedType(_roomConfiguration.get("name").toString(), (boolean) _roomConfiguration.get("extra_bed")));
-                                            });
-                                        } else {
-                                            // set default bedType first
-                                            if (!hotelWhichNotSpecifyBedTypeOrMaxOccu.contains(_roomClasses.get("id").toString())) {
+                                                roomClass.setMaxChild("0");
+                                                roomClass.setOrder(0);
                                                 hotelWhichNotSpecifyBedTypeOrMaxOccu.add(_roomClasses.get("id").toString());
+                                            } else {
+                                                roomClass.setMaxOccupancyExcludeExtraBed(convertObjectToInt(_roomClasses.get("max_occupancy_without_extra_bed")).toString());
+                                                roomClass.setMaxOccupancyIncludeExtraBed(convertObjectToInt(_roomClasses.get("max_occupancy_with_extra_bed")).toString());
+                                                roomClass.setMaxAdultIncludeExtraBed(convertObjectToInt(_roomClasses.get("max_adults_with_extra_bed")).toString());
+                                                if (_roomClasses.get("mix_adults_children_extra_bed") != null) {
+                                                    roomClass.setMixAdultAndChildInRoom(Boolean.parseBoolean(_roomClasses.get("mix_adults_children_extra_bed").toString()));
+                                                } else {
+                                                    roomClass.setMixAdultAndChildInRoom(false);
+                                                }
+                                                // set child policy for each room class
+                                                // TODO :: need to continue modify
+                                                if (_backendHotel.getChildPolicy() != null) {
+                                                    Map<String, Object> _max_child = new Gson().fromJson(new Gson().toJson(_backendHotel.getChildPolicy().get("maximum_children")), Map.class);
+                                                    Map<String, Object> _self = new Gson().fromJson(new Gson().toJson(_max_child.get("self")), Map.class);
+                                                    if (_self.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d",_rcm_counter)) != null) {
+                                                        roomClass.setMaxChild(convertObjectToInt(_self.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter))).toString());
+                                                    } else {
+                                                        // TODO :: need to ask jack to confirm again.
+                                                    }
+                                                } else {
+                                                    // TODO :: need to ask jack to confirm again.
+                                                }
+                                                roomClass.setOrder(0);
                                             }
-                                            bedTypeList.add(new BedType("single", false));
+                                            // TODO : some hotel not specify bedtype or maxOccu-- list in log.
+                                            List<BedType> bedTypeList = new ArrayList<>();
+                                            if (_roomClasses.get("room_configurations") != null) {
+                                                ((List<Map<String, Object>>) _roomClasses.get("room_configurations")).forEach(_roomConfiguration -> {
+                                                    bedTypeList.add(new BedType(_roomConfiguration.get("name").toString(), (boolean) _roomConfiguration.get("extra_bed")));
+                                                });
+                                            } else {
+                                                // set default bedType first
+                                                if (!hotelWhichNotSpecifyBedTypeOrMaxOccu.contains(_roomClasses.get("id").toString())) {
+                                                    hotelWhichNotSpecifyBedTypeOrMaxOccu.add(_roomClasses.get("id").toString());
+                                                }
+                                                bedTypeList.add(new BedType("single", false));
+                                            }
+                                            roomClass.setBedTypes(bedTypeList);
+                                        } else {
+                                            // add dummy roomClass
+                                            roomClass.setRoomClassName("dummy");
                                         }
-                                        roomClass.setBedTypes(bedTypeList);
                                         roomClassList.add(roomClass);
-                                    });
+                                    }
                                     String payload = "{\"type\":\"create_room_class\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\": {\"room_classes\":" + new Gson().toJson(roomClassList) + "}}}";
                                     JsonObject jsonCreateRoomClassesResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/room-classes" + "?token=" + loginToken, payload), JsonObject.class);
                                     System.out.println("i: " + backendHotelMetadataCounter + ", id: " + hotel.getHotelId().toString() + ", create_room_classe status: " + jsonCreateRoomClassesResponse.get("status").toString());
