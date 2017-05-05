@@ -1,0 +1,23 @@
+server:
+     host: 127.0.0.1
+     port: 8080
+
+redis:
+    host: redis
+    port: 6379
+
+crystal:
+        server : mq
+        port :
+          producer : 1234
+          consumer : 1235
+        topic : sunseries
+        channel : ms-request-handler
+
+token :
+    ignore :
+        uri : /sunseries/v1/authenticate,/sunseries/v1/deauthenticate,/sunseries/v1/services/status,/sunseries/v1/pictures,
+
+cloudinary:
+    update:
+        url: https://api.cloudinary.com/v1_1
