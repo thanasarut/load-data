@@ -7,6 +7,7 @@ import com.google.gson.internal.LinkedTreeMap;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
+import org.apache.commons.io.FileUtils;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.util.StringUtils;
 import sun.awt.image.ImageWatched;
@@ -34,6 +35,8 @@ public class Application {
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/room_rate.sort.csv";
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/temp.csv";
         //String fileName = "/Users/vick.thanasarut/sunseries/data_abook_127.0.0.1.csv";
+
+        File childPolicyProblemFile = new File("./childPolicyProblem.txt");
 
         // Pattern of Hotel Metadata -- It will start with "sunsXXXX" hotel_id
         String hotelMetaDataRegEx = "^suns[0-9]";
@@ -319,7 +322,7 @@ public class Application {
                                                             } else {
                                                                 // jack confirm that if have 0-set or not-set means 0 --> not allow children in that room_class --> martin confirm to put 99 and track the hotel in list, then let other fixed
                                                                 roomClass.setMaxChild("99");
-                                                                System.out.println("Must fix data :: " + hotel.getHotelId() + " not specify MaxChild of room_class");
+                                                                writeToFileApacheCommonIO("Must fix data :: " + hotel.getHotelId() + " not specify MaxChild of room_class", childPolicyProblemFile);
                                                             }
                                                         } else {
                                                             if (!StringUtils.isEmpty(_max_child.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter)))) {
@@ -327,11 +330,11 @@ public class Application {
                                                             } else {
                                                                 // jack confirm that if have 0-set or not-set means 0 --> not allow children in that room_class --> martin confirm to put 99 and track the hotel in list, then let other fixed
                                                                 roomClass.setMaxChild("99");
-                                                                System.out.println("Must fix data :: " + hotel.getHotelId() + " not specify MaxChild of room_class");
+                                                                writeToFileApacheCommonIO("Must fix data :: " + hotel.getHotelId() + " not specify MaxChild of room_class", childPolicyProblemFile);
                                                             }
                                                         }
                                                     } else {
-                                                        System.out.println("Must fix data :: " + hotel.getHotelId() + " not specify MaxChild of room_class");
+                                                        writeToFileApacheCommonIO("Must fix data :: " + hotel.getHotelId() + " not specify MaxChild of room_class", childPolicyProblemFile);
                                                     }
                                                 } else {
                                                     // if v.2 not specify any child_policy no need to do anything for v.3
@@ -549,5 +552,14 @@ public class Application {
                 .header("postman-token", "11b8d48b-be8f-839e-8ea5-4fd13727e859")
                 .asString();
         return response.getBody().toString();
+    }
+
+    public static void writeToFileApacheCommonIO(String msg, File file) {
+        try {
+            // 3rd parameter boolean append = true
+            FileUtils.writeStringToFile(file, msg, true);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
