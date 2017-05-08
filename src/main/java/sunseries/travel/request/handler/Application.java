@@ -34,6 +34,7 @@ public class Application {
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/temp.csv";
         //String fileName = "/Users/vick.thanasarut/sunseries/data_abook_127.0.0.1.csv";
 
+        File roomClassBedTypeProblemFile = new File("./roomClassBedTypeProblem.txt");
         File childPolicyProblemFile = new File("./childPolicyProblem.txt");
 
         //<editor-fold desc="grep begin pattern">
@@ -322,6 +323,7 @@ public class Application {
                                                 roomClass.setMixAdultAndChildInRoom(false);
                                                 roomClass.setMaxChild("0");
                                                 roomClass.setOrder(0);
+                                                writeToFileApacheCommonIO("no_max_occ:" + _roomClasses.get("id").toString() + System.lineSeparator(), roomClassBedTypeProblemFile);
                                                 hotelWhichNotSpecifyBedTypeOrMaxOccu.add(_roomClasses.get("id").toString());
                                             } else {
                                                 roomClass.setMaxOccupancyExcludeExtraBed(convertObjectToInt(_roomClasses.get("max_occupancy_without_extra_bed")).toString());
@@ -373,10 +375,8 @@ public class Application {
                                                 });
                                             } else {
                                                 // set default bedType first
-                                                if (!hotelWhichNotSpecifyBedTypeOrMaxOccu.contains(_roomClasses.get("id").toString())) {
-                                                    hotelWhichNotSpecifyBedTypeOrMaxOccu.add(_roomClasses.get("id").toString());
-                                                }
                                                 bedTypeList.add(new BedType("single", false));
+                                                writeToFileApacheCommonIO("no_bed_type:" + _roomClasses.get("id").toString() + System.lineSeparator(), roomClassBedTypeProblemFile);
                                             }
                                             roomClass.setBedTypes(bedTypeList);
                                             //</editor-fold>
