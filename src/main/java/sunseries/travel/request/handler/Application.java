@@ -141,6 +141,7 @@ public class Application {
                     sleep(300);
                     //</editor-fold>
                 } else if (hotelBaseRateDataPattern.matcher(readLine).find()) {
+                    //<editor-fold desc="RESP API hotel_base_rate">
                     // TODO :: display_markup from v.2 still need to add to ms-agents in v.3
                     // check pattern of room_rate that already specify room_rate data not empty_list
                     if (!Pattern.compile(",[0-9]+,[0-9]+,[0-9]+,[{}]+").matcher(readLine).find()) {
@@ -241,6 +242,7 @@ public class Application {
                     } else {
                         // means not specify room_rate or it is empty_list
                     }
+                    //</editor-fold>
                 } else if (hotelBackEndMetaDataPattern.matcher(readLine).find()) {
                     // TODO :: SEQUESNCE-2 :: load for backend_hotel
                     //<editor-fold desc="fix dirty data">
