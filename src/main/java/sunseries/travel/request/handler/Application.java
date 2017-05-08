@@ -7,19 +7,12 @@ import com.google.gson.internal.LinkedTreeMap;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
-import com.sun.xml.internal.rngom.binary.visitor.ChildElementFinder;
 import org.apache.commons.io.FileUtils;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.util.StringUtils;
-import sun.awt.image.ImageWatched;
-import sun.util.resources.cldr.ro.CalendarData_ro_MD;
 import sunseries.travel.request.handler.message.*;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +33,8 @@ public class Application {
         String fileName = "/Users/thanasarut/sunseries/source_load_data/room_rate.sort.csv";
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/temp.csv";
         //String fileName = "/Users/vick.thanasarut/sunseries/data_abook_127.0.0.1.csv";
+
+        File childPolicyProblemFile = new File("./childPolicyProblem.txt");
 
         //<editor-fold desc="grep begin pattern">
         // Pattern of Hotel Metadata -- It will start with "sunsXXXX" hotel_id
@@ -338,22 +333,28 @@ public class Application {
                                                 //<editor-fold desc="Set max child for each room_class - must already have room_class">
                                                 // set child policy for each room class
                                                 if (_backendHotel.getChildPolicy() != null) {
-                                                    Map<String, Object> _max_child = new Gson().fromJson(new Gson().toJson(_backendHotel.getChildPolicy().get("maximum_children")), Map.class);
-                                                    if (_max_child.get("self") != null) {
-                                                        Map<String, Object> _self = new Gson().fromJson(new Gson().toJson(_max_child.get("self")), Map.class);
-                                                        if (_self.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter)) != null) {
-                                                            roomClass.setMaxChild(convertObjectToInt(_self.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter))).toString());
+                                                    if (_backendHotel.getChildPolicy().get("maximum_children") != null) {
+                                                        Map<String, Object> _max_child = new Gson().fromJson(new Gson().toJson(_backendHotel.getChildPolicy().get("maximum_children")), Map.class);
+                                                        if (_max_child.get("self") != null) {
+                                                            Map<String, Object> _self = new Gson().fromJson(new Gson().toJson(_max_child.get("self")), Map.class);
+                                                            if (!StringUtils.isEmpty(_self.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter)))) {
+                                                                roomClass.setMaxChild(convertObjectToInt(_self.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter))).toString());
+                                                            } else {
+                                                                // jack confirm that if have 0-set or not-set means 0 --> not allow children in that room_class --> martin confirm to put 99 and track the hotel in list, then let other fixed
+                                                                roomClass.setMaxChild("99");
+                                                                writeToFileApacheCommonIO("Must fix data :: " + hotel.getHotelId() + " not specify MaxChild of room_class", childPolicyProblemFile);
+                                                            }
                                                         } else {
-                                                            // jack confirm that if have 0-set or not-set means 0 --> not allow children in that room_class
-                                                            roomClass.setMaxChild("0");
+                                                            if (!StringUtils.isEmpty(_max_child.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter)))) {
+                                                                roomClass.setMaxChild(convertObjectToInt(_max_child.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter))).toString());
+                                                            } else {
+                                                                // jack confirm that if have 0-set or not-set means 0 --> not allow children in that room_class --> martin confirm to put 99 and track the hotel in list, then let other fixed
+                                                                roomClass.setMaxChild("99");
+                                                                writeToFileApacheCommonIO("Must fix data :: " + hotel.getHotelId() + " not specify MaxChild of room_class", childPolicyProblemFile);
+                                                            }
                                                         }
                                                     } else {
-                                                        if (_max_child.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter)) != null) {
-                                                            roomClass.setMaxChild(convertObjectToInt(_max_child.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter))).toString());
-                                                        } else {
-                                                            // jack confirm that if have 0-set or not-set means 0 --> not allow children in that room_class
-                                                            roomClass.setMaxChild("0");
-                                                        }
+                                                        writeToFileApacheCommonIO("Must fix data :: " + hotel.getHotelId() + " not specify MaxChild of room_class", childPolicyProblemFile);
                                                     }
                                                 } else {
                                                     // if v.2 not specify any child_policy no need to do anything for v.3
@@ -593,7 +594,7 @@ public class Application {
     private static Integer convertObjectToInt(Object numberKeepAsString) {
         Integer returnInt = 0;
         if (numberKeepAsString.toString() != null) {
-            returnInt = (int)Float.parseFloat(numberKeepAsString.toString());
+            returnInt = (int)Float.parseFloat(numberKeepAsString.toString().replaceAll("`",""));
         }
         return returnInt;
     }
