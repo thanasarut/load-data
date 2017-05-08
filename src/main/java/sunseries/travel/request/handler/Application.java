@@ -397,161 +397,167 @@ public class Application {
                             } else {
                                 //<editor-fold desc="REST API 3rd - cancellation_policy, minimum_night_stay, child_policy parallels">
 
-                                //<editor-fold desc="REST API add cancellation_policy">
-                                // TODO :: Add cancellation_policy == doing parallel just put "if (0==1)" instead
-                                // check if already add cancellation_policy for this hotel_id or not?
-                                JsonObject checkCancellationAddedResponse = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/cancellation-policies?token=" + loginToken), JsonObject.class);
-                                HotelsCancellationPolicy hotelsCancellationPolicy = new Gson().fromJson(checkCancellationAddedResponse.get("result"), HotelsCancellationPolicy.class);
-                                if (hotelsCancellationPolicy.getCancellationPolicyList() == null || hotelsCancellationPolicy.getCancellationPolicyList().size() == 0) {
-                                    if (!StringUtils.isEmpty(_backendHotel.getCancellationPolicies()) & _backendHotel.getCancellationPolicies().size() != 0) {
-                                        List<CancellationPolicy> cancellationPolicyList = new ArrayList<>();
-                                        hotel.getRoomClasses().forEach(roomClass -> {
-                                            _backendHotel.getCancellationPolicies().forEach(_cancellationPolicy -> {
-                                                CancellationPolicy cancellationPolicy = new CancellationPolicy();
+                                if (1==1) {
+                                    //<editor-fold desc="REST API add cancellation_policy">
+                                    // TODO :: Add cancellation_policy == doing parallel just put "if (0==1)" instead
+                                    // check if already add cancellation_policy for this hotel_id or not?
+                                    JsonObject checkCancellationAddedResponse = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/cancellation-policies?token=" + loginToken), JsonObject.class);
+                                    HotelsCancellationPolicy hotelsCancellationPolicy = new Gson().fromJson(checkCancellationAddedResponse.get("result"), HotelsCancellationPolicy.class);
+                                    if (hotelsCancellationPolicy.getCancellationPolicyList() == null || hotelsCancellationPolicy.getCancellationPolicyList().size() == 0) {
+                                        if (!StringUtils.isEmpty(_backendHotel.getCancellationPolicies()) & _backendHotel.getCancellationPolicies().size() != 0) {
+                                            List<CancellationPolicy> cancellationPolicyList = new ArrayList<>();
+                                            hotel.getRoomClasses().forEach(roomClass -> {
+                                                _backendHotel.getCancellationPolicies().forEach(_cancellationPolicy -> {
+                                                    CancellationPolicy cancellationPolicy = new CancellationPolicy();
 
-                                                if (_cancellationPolicy.getPeriod() != null) {
-                                                    cancellationPolicy.setFromDate(transformOldDateToString(_cancellationPolicy.getPeriod().get("from")));
-                                                    cancellationPolicy.setToDate(transformOldDateToString(_cancellationPolicy.getPeriod().get("to")));
-                                                }
-                                                cancellationPolicy.setMarket("market::1");
-                                                cancellationPolicy.setRoomClass(roomClass.getRoomClassId());
-                                                if (_cancellationPolicy.getDay() != null) {
-                                                    cancellationPolicy.setDays(convertObjectToInt(_cancellationPolicy.getDay()));
-                                                } else {
-                                                    cancellationPolicy.setDays(7);
-                                                }
+                                                    if (_cancellationPolicy.getPeriod() != null) {
+                                                        cancellationPolicy.setFromDate(transformOldDateToString(_cancellationPolicy.getPeriod().get("from")));
+                                                        cancellationPolicy.setToDate(transformOldDateToString(_cancellationPolicy.getPeriod().get("to")));
+                                                    }
+                                                    cancellationPolicy.setMarket("market::1");
+                                                    cancellationPolicy.setRoomClass(roomClass.getRoomClassId());
+                                                    if (_cancellationPolicy.getDay() != null) {
+                                                        cancellationPolicy.setDays(convertObjectToInt(_cancellationPolicy.getDay()));
+                                                    } else {
+                                                        cancellationPolicy.setDays(7);
+                                                    }
 
-                                                cancellationPolicyList.add(cancellationPolicy);
+                                                    cancellationPolicyList.add(cancellationPolicy);
+                                                });
                                             });
-                                        });
 
-                                        System.out.println("hotel_id: " + hotel.getHotelId() + ", room_classes: " + hotel.getRoomClasses().size() + ", old_cancellation_policy: " + _backendHotel.getCancellationPolicies().size() + ", new_cancellation_policy: " + cancellationPolicyList.size());
-                                        AtomicInteger i = new AtomicInteger(0);
-                                        for (CancellationPolicy cancellationPolicy : cancellationPolicyList) {
-                                            String input = "{\"type\":\"create_hotel_cancellation_policy\",\"event_data\":{\"cancellation_policy\":" + new Gson().toJson(cancellationPolicy) + "}}";
-                                            JsonObject jsonAddCancellationPolicy = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/cancellation-policies?token=" + loginToken, input), JsonObject.class);
-                                            System.out.println("i: " + backendHotelMetadataCounter + ", hotel_id: " + hotel.getHotelId() + ", cancellation policy@: " + i.incrementAndGet() + ", cancellationPolicyId: " + jsonAddCancellationPolicy.get("id").toString() + ", status: " + jsonAddCancellationPolicy.get("status").toString());
-                                            sleep(100);
-                                        }
-                                    } else {
-                                        // old version not specify cancellation_policy
-                                    }
-                                } else {
-                                    // already added
-                                }
-                                //</editor-fold>
-
-                                //<editor-fold desc="REST API add minimum_night_stay">
-                                // TODO :: Add minimum_night_stay == doing parallels just put "if (0==1)" instead
-                                JsonObject checkMinimumNightStayAddedResponse = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/minimum-night-stay?token=" + loginToken), JsonObject.class);
-                                HotelMinimumNightStay hotelMinimumNightStay = new Gson().fromJson(checkMinimumNightStayAddedResponse.get("result"), HotelMinimumNightStay.class);
-                                if ((hotelMinimumNightStay == null) || (hotelMinimumNightStay.getMiniMumNightStayList() == null) || (hotelMinimumNightStay.getMiniMumNightStayList().size() == 0)) {
-                                    if (!StringUtils.isEmpty(_backendHotel.getMinimumNightStayPeriods()) & (_backendHotel.getMinimumNightStayPeriods().size() != 0)) {
-                                        List<MiniMumNightStay> miniMumNightStayList = new ArrayList<>();
-                                        hotel.getRoomClasses().forEach(roomClass -> {
-                                            MiniMumNightStay miniMumNightStay = new MiniMumNightStay();
-                                            _backendHotel.getMinimumNightStayPeriods().forEach(_minimumNightStay -> {
-                                                if (!StringUtils.isEmpty(_minimumNightStay.getMinimumNightStay())) {
-                                                    miniMumNightStay.setNights(convertObjectToInt(_minimumNightStay.getMinimumNightStay()));
-                                                } else {
-                                                    // should not happended
-                                                }
-                                                if (!StringUtils.isEmpty(_minimumNightStay.getApplicationCriteria())) {
-                                                    miniMumNightStay.setApplicationCriteria(_minimumNightStay.getApplicationCriteria().replaceAll(":", ""));
-                                                } else {
-                                                    // should not happended
-                                                }
-                                                miniMumNightStay.setRoomClass(roomClass.getRoomClassId());
-                                                if (_minimumNightStay.getPeriod() != null) {
-                                                    miniMumNightStay.setFromDate(transformOldDateToString(_minimumNightStay.getPeriod().get("from")));
-                                                    miniMumNightStay.setToDate(transformOldDateToString(_minimumNightStay.getPeriod().get("to")));
-                                                } else {
-                                                    // should not happended
-                                                }
-                                                miniMumNightStay.setMarket("market::1");
-                                                miniMumNightStayList.add(miniMumNightStay);
-                                            });
-                                        });
-
-                                        System.out.println("hotel_id: " + hotel.getHotelId() + ", room_classes: " + hotel.getRoomClasses().size() + ", old_minimum_night_stay: " + _backendHotel.getMinimumNightStayPeriods().size() + ", new_minimum_night_stay: " + miniMumNightStayList.size());
-                                        AtomicInteger i = new AtomicInteger(0);
-                                        for (MiniMumNightStay miniMumNightStay : miniMumNightStayList) {
-                                            String input = "{\"type\":\"create_hotel_minimum_night_stay\",\"event_data\":{\"minimum_night_stay\":" + new Gson().toJson(miniMumNightStay) + "}}";
-                                            JsonObject jsonMinimumNightStayResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/minimum-night-stay?token=" + loginToken, input), JsonObject.class);
-                                            System.out.println("i: " + backendHotelMetadataCounter + ", hotel_id: " + hotel.getHotelId() + ", minimum_night_stay@: " + i.incrementAndGet() + ", minimum_night_stay_id: " + jsonMinimumNightStayResponse.get("id").toString() + ", status: " + jsonMinimumNightStayResponse.get("status").toString());
-                                            sleep(100);
-                                        }
-                                    } else {
-                                        // v2 no any specify minimum_night_stay
-                                    }
-                                } else {
-                                    // // already load minimum night stay
-                                }
-                                //</editor-fold>
-
-                                //<editor-fold desc="REST API add child_policy">
-                                // TODO :: Add child_policy == doing parallels just put "if (0==1)" instead
-                                JsonObject checkChildPolicyAddedResponse = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/child-policy?token=" + loginToken), JsonObject.class);
-                                HotelChildPolicy hotelChildPolicy = new Gson().fromJson(checkChildPolicyAddedResponse.get("result"), HotelChildPolicy.class);
-                                if ((hotelChildPolicy == null) || (hotelChildPolicy.getChildPolicyList() == null) || (hotelChildPolicy.getChildPolicyList().size() == 0)) {
-                                    if (!StringUtils.isEmpty(_backendHotel.getChildPolicy())) {
-                                        List<ChildPolicy> childPolicies = new ArrayList<>();
-                                        hotel.getRoomClasses().forEach(roomClass -> {
-                                            ChildPolicy childPolicy = new ChildPolicy();
-                                            if (!StringUtils.isEmpty(_backendHotel.getChildPolicy())) {
-                                                if (!StringUtils.isEmpty(_backendHotel.getChildPolicy().get("breakfast_rate_adjustment"))) {
-                                                    childPolicy.setBreakfastRate(convertObjectToInt(_backendHotel.getChildPolicy().get("breakfast_rate_adjustment")).toString());
-                                                } else {
-                                                    // TODO :: confirm with jack found json "breakfast_rate_adjustment" = "" in v.2 how v.3 will put
-                                                }
-
-                                                if (!StringUtils.isEmpty(_backendHotel.getChildPolicy().get("extra_bed_rate_adjustment"))) {
-                                                    childPolicy.setExtraBedRate(convertObjectToInt(_backendHotel.getChildPolicy().get("extra_bed_adjustment")).toString());
-                                                } else {
-                                                    // TODO :: confirm with jack found json "extra_bed_rate_adjustment" = "" in v.2 how v.3 will put
-                                                }
-
-                                                childPolicy.setFromDate("2017-01-01");
-                                                childPolicy.setToDate("2017-12-31");
-
-                                                if (!StringUtils.isEmpty(_backendHotel.getChildPolicy().get("breakfast_is_compulsory"))) {
-                                                    childPolicy.setBreakfastIsCompulsory(Boolean.parseBoolean(_backendHotel.getChildPolicy().get("breakfast_is_compulsory").toString()));
-                                                } else {
-                                                    // TODO :: confirm with jack found json "breakfast_is_compulsory" = "" in v.2 how to put in v.3
-                                                }
-
-                                                if (!StringUtils.isEmpty(_backendHotel.getChildPolicy().get("extra_bed_is_compulsory"))) {
-                                                    childPolicy.setExtraBedIsCompulsory(Boolean.parseBoolean(_backendHotel.getChildPolicy().get("extra_bed_is_compulsory").toString()));
-                                                } else {
-                                                    // TODO :: confirm with jack found json "extra_bed_is_compulsory" = "" in v.2 how to put in v.3
-                                                }
-
-                                                if (!StringUtils.isEmpty(_backendHotel.getChildPolicy().get("currency_code"))) {
-                                                    childPolicy.setCurrencyCode(_backendHotel.getChildPolicy().get("currency_code").toString());
-                                                } else {
-                                                    // TODO :: confirm with jack found json "currency_code" = "" in v.2 how to put in v.3
-                                                }
-                                                childPolicies.add(childPolicy);
-                                            } else {
-                                                // v2 no any specify child_policy
+                                            System.out.println("hotel_id: " + hotel.getHotelId() + ", room_classes: " + hotel.getRoomClasses().size() + ", old_cancellation_policy: " + _backendHotel.getCancellationPolicies().size() + ", new_cancellation_policy: " + cancellationPolicyList.size());
+                                            AtomicInteger i = new AtomicInteger(0);
+                                            for (CancellationPolicy cancellationPolicy : cancellationPolicyList) {
+                                                String input = "{\"type\":\"create_hotel_cancellation_policy\",\"event_data\":{\"cancellation_policy\":" + new Gson().toJson(cancellationPolicy) + "}}";
+                                                JsonObject jsonAddCancellationPolicy = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/cancellation-policies?token=" + loginToken, input), JsonObject.class);
+                                                System.out.println("i: " + backendHotelMetadataCounter + ", hotel_id: " + hotel.getHotelId() + ", cancellation policy@: " + i.incrementAndGet() + ", cancellationPolicyId: " + jsonAddCancellationPolicy.get("id").toString() + ", status: " + jsonAddCancellationPolicy.get("status").toString());
+                                                sleep(100);
                                             }
-                                        });
-
-                                        System.out.println("hotel_id: " + hotel.getHotelId() + ", room_classes: " + hotel.getRoomClasses().size() + ", old_child_policy: " + _backendHotel.getChildPolicy().size() + ", new_child_policy: " + childPolicies.size());
-                                        AtomicInteger i = new AtomicInteger(0);
-                                        for (ChildPolicy childPolicy : childPolicies) {
-                                            String input = "{\"type\":\"create_hotel_child_policy\",\"event_data\":{\"child_policy\":" + new Gson().toJson(childPolicy) + "}}";
-                                            JsonObject jsonChildPolicyResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/child-policy?token=" + loginToken, input), JsonObject.class);
-                                            System.out.println("i: " + backendHotelMetadataCounter + ", hotel_id: " + hotel.getHotelId() + ", child_policy@: " + i.incrementAndGet() + ", child_policy_id: " + jsonChildPolicyResponse.get("id").toString() + ", status: " + jsonChildPolicyResponse.get("status").toString());
-                                            sleep(100);
+                                        } else {
+                                            // old version not specify cancellation_policy
                                         }
                                     } else {
-                                        // v2 no any specify minimum_night_stay
+                                        // already added
                                     }
-                                } else {
-                                    // // already load minimum night stay
+                                    //</editor-fold>
                                 }
-                                //</editor-fold>
+
+                                if (1==0) {
+                                    //<editor-fold desc="REST API add minimum_night_stay">
+                                    // TODO :: Add minimum_night_stay == doing parallels just put "if (0==1)" instead
+                                    JsonObject checkMinimumNightStayAddedResponse = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/minimum-night-stay?token=" + loginToken), JsonObject.class);
+                                    HotelMinimumNightStay hotelMinimumNightStay = new Gson().fromJson(checkMinimumNightStayAddedResponse.get("result"), HotelMinimumNightStay.class);
+                                    if ((hotelMinimumNightStay == null) || (hotelMinimumNightStay.getMiniMumNightStayList() == null) || (hotelMinimumNightStay.getMiniMumNightStayList().size() == 0)) {
+                                        if (!StringUtils.isEmpty(_backendHotel.getMinimumNightStayPeriods()) & (_backendHotel.getMinimumNightStayPeriods().size() != 0)) {
+                                            List<MiniMumNightStay> miniMumNightStayList = new ArrayList<>();
+                                            hotel.getRoomClasses().forEach(roomClass -> {
+                                                MiniMumNightStay miniMumNightStay = new MiniMumNightStay();
+                                                _backendHotel.getMinimumNightStayPeriods().forEach(_minimumNightStay -> {
+                                                    if (!StringUtils.isEmpty(_minimumNightStay.getMinimumNightStay())) {
+                                                        miniMumNightStay.setNights(convertObjectToInt(_minimumNightStay.getMinimumNightStay()));
+                                                    } else {
+                                                        // should not happended
+                                                    }
+                                                    if (!StringUtils.isEmpty(_minimumNightStay.getApplicationCriteria())) {
+                                                        miniMumNightStay.setApplicationCriteria(_minimumNightStay.getApplicationCriteria().replaceAll(":", ""));
+                                                    } else {
+                                                        // should not happended
+                                                    }
+                                                    miniMumNightStay.setRoomClass(roomClass.getRoomClassId());
+                                                    if (_minimumNightStay.getPeriod() != null) {
+                                                        miniMumNightStay.setFromDate(transformOldDateToString(_minimumNightStay.getPeriod().get("from")));
+                                                        miniMumNightStay.setToDate(transformOldDateToString(_minimumNightStay.getPeriod().get("to")));
+                                                    } else {
+                                                        // should not happended
+                                                    }
+                                                    miniMumNightStay.setMarket("market::1");
+                                                    miniMumNightStayList.add(miniMumNightStay);
+                                                });
+                                            });
+
+                                            System.out.println("hotel_id: " + hotel.getHotelId() + ", room_classes: " + hotel.getRoomClasses().size() + ", old_minimum_night_stay: " + _backendHotel.getMinimumNightStayPeriods().size() + ", new_minimum_night_stay: " + miniMumNightStayList.size());
+                                            AtomicInteger i = new AtomicInteger(0);
+                                            for (MiniMumNightStay miniMumNightStay : miniMumNightStayList) {
+                                                String input = "{\"type\":\"create_hotel_minimum_night_stay\",\"event_data\":{\"minimum_night_stay\":" + new Gson().toJson(miniMumNightStay) + "}}";
+                                                JsonObject jsonMinimumNightStayResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/minimum-night-stay?token=" + loginToken, input), JsonObject.class);
+                                                System.out.println("i: " + backendHotelMetadataCounter + ", hotel_id: " + hotel.getHotelId() + ", minimum_night_stay@: " + i.incrementAndGet() + ", minimum_night_stay_id: " + jsonMinimumNightStayResponse.get("id").toString() + ", status: " + jsonMinimumNightStayResponse.get("status").toString());
+                                                sleep(100);
+                                            }
+                                        } else {
+                                            // v2 no any specify minimum_night_stay
+                                        }
+                                    } else {
+                                        // // already load minimum night stay
+                                    }
+                                    //</editor-fold>
+                                }
+
+                                if (1==0) {
+                                    //<editor-fold desc="REST API add child_policy">
+                                    // TODO :: Add child_policy == doing parallels just put "if (0==1)" instead
+                                    JsonObject checkChildPolicyAddedResponse = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/child-policy?token=" + loginToken), JsonObject.class);
+                                    HotelChildPolicy hotelChildPolicy = new Gson().fromJson(checkChildPolicyAddedResponse.get("result"), HotelChildPolicy.class);
+                                    if ((hotelChildPolicy == null) || (hotelChildPolicy.getChildPolicyList() == null) || (hotelChildPolicy.getChildPolicyList().size() == 0)) {
+                                        if (!StringUtils.isEmpty(_backendHotel.getChildPolicy())) {
+                                            List<ChildPolicy> childPolicies = new ArrayList<>();
+                                            hotel.getRoomClasses().forEach(roomClass -> {
+                                                ChildPolicy childPolicy = new ChildPolicy();
+                                                if (!StringUtils.isEmpty(_backendHotel.getChildPolicy())) {
+                                                    if (!StringUtils.isEmpty(_backendHotel.getChildPolicy().get("breakfast_rate_adjustment"))) {
+                                                        childPolicy.setBreakfastRate(convertObjectToInt(_backendHotel.getChildPolicy().get("breakfast_rate_adjustment")).toString());
+                                                    } else {
+                                                        // TODO :: confirm with jack found json "breakfast_rate_adjustment" = "" in v.2 how v.3 will put
+                                                    }
+
+                                                    if (!StringUtils.isEmpty(_backendHotel.getChildPolicy().get("extra_bed_rate_adjustment"))) {
+                                                        childPolicy.setExtraBedRate(convertObjectToInt(_backendHotel.getChildPolicy().get("extra_bed_adjustment")).toString());
+                                                    } else {
+                                                        // TODO :: confirm with jack found json "extra_bed_rate_adjustment" = "" in v.2 how v.3 will put
+                                                    }
+
+                                                    childPolicy.setFromDate("2017-01-01");
+                                                    childPolicy.setToDate("2017-12-31");
+
+                                                    if (!StringUtils.isEmpty(_backendHotel.getChildPolicy().get("breakfast_is_compulsory"))) {
+                                                        childPolicy.setBreakfastIsCompulsory(Boolean.parseBoolean(_backendHotel.getChildPolicy().get("breakfast_is_compulsory").toString()));
+                                                    } else {
+                                                        // TODO :: confirm with jack found json "breakfast_is_compulsory" = "" in v.2 how to put in v.3
+                                                    }
+
+                                                    if (!StringUtils.isEmpty(_backendHotel.getChildPolicy().get("extra_bed_is_compulsory"))) {
+                                                        childPolicy.setExtraBedIsCompulsory(Boolean.parseBoolean(_backendHotel.getChildPolicy().get("extra_bed_is_compulsory").toString()));
+                                                    } else {
+                                                        // TODO :: confirm with jack found json "extra_bed_is_compulsory" = "" in v.2 how to put in v.3
+                                                    }
+
+                                                    if (!StringUtils.isEmpty(_backendHotel.getChildPolicy().get("currency_code"))) {
+                                                        childPolicy.setCurrencyCode(_backendHotel.getChildPolicy().get("currency_code").toString());
+                                                    } else {
+                                                        // TODO :: confirm with jack found json "currency_code" = "" in v.2 how to put in v.3
+                                                    }
+                                                    childPolicies.add(childPolicy);
+                                                } else {
+                                                    // v2 no any specify child_policy
+                                                }
+                                            });
+
+                                            System.out.println("hotel_id: " + hotel.getHotelId() + ", room_classes: " + hotel.getRoomClasses().size() + ", old_child_policy: " + _backendHotel.getChildPolicy().size() + ", new_child_policy: " + childPolicies.size());
+                                            AtomicInteger i = new AtomicInteger(0);
+                                            for (ChildPolicy childPolicy : childPolicies) {
+                                                String input = "{\"type\":\"create_hotel_child_policy\",\"event_data\":{\"child_policy\":" + new Gson().toJson(childPolicy) + "}}";
+                                                JsonObject jsonChildPolicyResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/child-policy?token=" + loginToken, input), JsonObject.class);
+                                                System.out.println("i: " + backendHotelMetadataCounter + ", hotel_id: " + hotel.getHotelId() + ", child_policy@: " + i.incrementAndGet() + ", child_policy_id: " + jsonChildPolicyResponse.get("id").toString() + ", status: " + jsonChildPolicyResponse.get("status").toString());
+                                                sleep(100);
+                                            }
+                                        } else {
+                                            // v2 no any specify minimum_night_stay
+                                        }
+                                    } else {
+                                        // // already load minimum night stay
+                                    }
+                                    //</editor-fold>
+                                }
 
                                 //</editor-fold>
                             }
