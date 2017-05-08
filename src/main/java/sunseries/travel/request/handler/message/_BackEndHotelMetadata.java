@@ -61,14 +61,13 @@ public class _BackEndHotelMetadata implements Serializable {
     @SerializedName("sales_email")
     private String salesEmail;
     @SerializedName("cancellation_policies")
-    //private List<Map<String, Object>> cancellationPolicies;
     private List<_CancellationPolicies> cancellationPolicies;
     @SerializedName("facade_id")
     private String facadeId;
+    @SerializedName("minimum_night_stay_periods")
+    private List<_MinimumNightStay> minimumNightStayPeriods;
 
     /*// recheck minimumNightStayPeriod
-    @SerializedName("minimum_night_stay_period")
-    private Object minimumNightStayPeriod;
     @SerializedName("closed_allotments")
     private List<Map<String, Object>> closeAllotments;
     // recheck options
@@ -310,5 +309,13 @@ public class _BackEndHotelMetadata implements Serializable {
 
     public void setFacadeId(String facadeId) {
         this.facadeId = facadeId;
+    }
+
+    public List<_MinimumNightStay> getMinimumNightStayPeriods() {
+        return minimumNightStayPeriods;
+    }
+
+    public void setMinimumNightStayPeriods(List<_MinimumNightStay> minimumNightStayPeriods) {
+        this.minimumNightStayPeriods = minimumNightStayPeriods;
     }
 }
