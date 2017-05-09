@@ -427,12 +427,12 @@ public class Application {
                                                 });
                                             });
 
-                                            System.out.println("hotel_id: " + hotelsCancellationPolicy.getHotelId() + ", room_classes: " + hotel.getRoomClasses().size() + ", old_cancellation_policy: " + _backendHotel.getCancellationPolicies().size() + ", new_cancellation_policy: " + cancellationPolicyList.size());
+                                            System.out.println("hotel_id: " + hotel.getHotelId() + ", room_classes: " + hotel.getRoomClasses().size() + ", old_cancellation_policy: " + _backendHotel.getCancellationPolicies().size() + ", new_cancellation_policy: " + cancellationPolicyList.size());
                                             AtomicInteger i = new AtomicInteger(0);
                                             for (CancellationPolicy cancellationPolicy : cancellationPolicyList) {
                                                 String input = "{\"type\":\"create_hotel_cancellation_policy\",\"event_data\":{\"cancellation_policy\":" + new Gson().toJson(cancellationPolicy) + "}}";
-                                                JsonObject jsonAddCancellationPolicy = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotelsCancellationPolicy.getHotelId() + "/cancellation-policies?token=" + loginToken, input), JsonObject.class);
-                                                System.out.println("i: " + backendHotelMetadataCounter + ", hotel_id: " + hotelsCancellationPolicy.getHotelId() + ", cancellation policy@: " + i.incrementAndGet() + ", cancellationPolicyId: " + jsonAddCancellationPolicy.get("id").toString() + ", status: " + jsonAddCancellationPolicy.get("status").toString());
+                                                JsonObject jsonAddCancellationPolicy = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/cancellation-policies?token=" + loginToken, input), JsonObject.class);
+                                                System.out.println("i: " + backendHotelMetadataCounter + ", hotel_id: " + hotel.getHotelId() + ", cancellation policy@: " + i.incrementAndGet() + ", cancellationPolicyId: " + jsonAddCancellationPolicy.get("id").toString() + ", status: " + jsonAddCancellationPolicy.get("status").toString());
                                                 sleep(100);
                                             }
                                         } else {
@@ -477,12 +477,12 @@ public class Application {
                                                 });
                                             });
 
-                                            System.out.println("hotel_id: " + hotelMinimumNightStay.getHotelId() + ", room_classes: " + hotel.getRoomClasses().size() + ", old_minimum_night_stay: " + _backendHotel.getMinimumNightStayPeriods().size() + ", new_minimum_night_stay: " + miniMumNightStayList.size());
+                                            System.out.println("hotel_id: " + hotel.getHotelId() + ", room_classes: " + hotel.getRoomClasses().size() + ", old_minimum_night_stay: " + _backendHotel.getMinimumNightStayPeriods().size() + ", new_minimum_night_stay: " + miniMumNightStayList.size());
                                             AtomicInteger i = new AtomicInteger(0);
                                             for (MiniMumNightStay miniMumNightStay : miniMumNightStayList) {
                                                 String input = "{\"type\":\"create_hotel_minimum_night_stay\",\"event_data\":{\"minimum_night_stay\":" + new Gson().toJson(miniMumNightStay) + "}}";
-                                                JsonObject jsonMinimumNightStayResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotelMinimumNightStay.getHotelId() + "/minimum-night-stay?token=" + loginToken, input), JsonObject.class);
-                                                System.out.println("i: " + backendHotelMetadataCounter + ", hotel_id: " + hotelMinimumNightStay.getHotelId() + ", minimum_night_stay@: " + i.incrementAndGet() + ", minimum_night_stay_id: " + jsonMinimumNightStayResponse.get("id").toString() + ", status: " + jsonMinimumNightStayResponse.get("status").toString());
+                                                JsonObject jsonMinimumNightStayResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/minimum-night-stay?token=" + loginToken, input), JsonObject.class);
+                                                System.out.println("i: " + backendHotelMetadataCounter + ", hotel_id: " + hotel.getHotelId() + ", minimum_night_stay@: " + i.incrementAndGet() + ", minimum_night_stay_id: " + jsonMinimumNightStayResponse.get("id").toString() + ", status: " + jsonMinimumNightStayResponse.get("status").toString());
                                                 sleep(100);
                                             }
                                         } else {
@@ -543,11 +543,11 @@ public class Application {
                                                 }
                                             });
 
-                                            System.out.println("hotel_id: " + hotelChildPolicy.getHotelId() + ", room_classes: " + hotel.getRoomClasses().size() + ", old_child_policy: " + _backendHotel.getChildPolicy().size() + ", new_child_policy: " + childPolicies.size());
+                                            System.out.println("hotel_id: " + hotel.getHotelId() + ", room_classes: " + hotel.getRoomClasses().size() + ", old_child_policy: " + _backendHotel.getChildPolicy().size() + ", new_child_policy: " + childPolicies.size());
                                             AtomicInteger i = new AtomicInteger(0); for (ChildPolicy childPolicy : childPolicies) {
                                                 String input = "{\"type\":\"create_hotel_child_policy\",\"event_data\":{\"child_policy\":" + new Gson().toJson(childPolicy) + "}}";
-                                                JsonObject jsonChildPolicyResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotelChildPolicy.getHotelId() + "/child-policy?token=" + loginToken, input), JsonObject.class);
-                                                System.out.println("i: " + backendHotelMetadataCounter + ", hotel_id: " + hotelChildPolicy.getHotelId() + ", child_policy@: " + i.incrementAndGet() + ", child_policy_id: " + jsonChildPolicyResponse.get("id").toString() + ", status: " + jsonChildPolicyResponse.get("status").toString());
+                                                JsonObject jsonChildPolicyResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/child-policy?token=" + loginToken, input), JsonObject.class);
+                                                System.out.println("i: " + backendHotelMetadataCounter + ", hotel_id: " + hotel.getHotelId() + ", child_policy@: " + i.incrementAndGet() + ", child_policy_id: " + jsonChildPolicyResponse.get("id").toString() + ", status: " + jsonChildPolicyResponse.get("status").toString());
                                                 sleep(100);
                                             }
                                         } else {
