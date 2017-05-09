@@ -404,8 +404,8 @@ public class Application {
                                     // check if already add cancellation_policy for this hotel_id or not?
                                     JsonObject checkCancellationAddedResponse = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/cancellation-policies?token=" + loginToken), JsonObject.class);
                                     HotelsCancellationPolicy hotelsCancellationPolicy = new Gson().fromJson(checkCancellationAddedResponse.get("result"), HotelsCancellationPolicy.class);
-                                    if (hotelsCancellationPolicy.getHotelId() != null & (hotelsCancellationPolicy.getCancellationPolicyList() == null || hotelsCancellationPolicy.getCancellationPolicyList().size() == 0)) {
-                                        if (!StringUtils.isEmpty(_backendHotel.getCancellationPolicies()) & _backendHotel.getCancellationPolicies().size() != 0) {
+                                    if (hotelsCancellationPolicy.getCancellationPolicyList() == null || hotelsCancellationPolicy.getCancellationPolicyList().size() == 0) {
+                                        if (!StringUtils.isEmpty(_backendHotel.getCancellationPolicies()) && (_backendHotel.getCancellationPolicies().size() != 0)) {
                                             List<CancellationPolicy> cancellationPolicyList = new ArrayList<>();
                                             hotel.getRoomClasses().forEach(roomClass -> {
                                                 _backendHotel.getCancellationPolicies().forEach(_cancellationPolicy -> {
@@ -450,7 +450,7 @@ public class Application {
                                     JsonObject checkMinimumNightStayAddedResponse = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/minimum-night-stay?token=" + loginToken), JsonObject.class);
                                     HotelMinimumNightStay hotelMinimumNightStay = new Gson().fromJson(checkMinimumNightStayAddedResponse.get("result"), HotelMinimumNightStay.class);
                                     if (hotelMinimumNightStay.getHotelId() != null & ((hotelMinimumNightStay == null) || (hotelMinimumNightStay.getMiniMumNightStayList() == null) || (hotelMinimumNightStay.getMiniMumNightStayList().size() == 0))) {
-                                        if (!StringUtils.isEmpty(_backendHotel.getMinimumNightStayPeriods()) & (_backendHotel.getMinimumNightStayPeriods().size() != 0)) {
+                                        if (!StringUtils.isEmpty(_backendHotel.getMinimumNightStayPeriods()) && (_backendHotel.getMinimumNightStayPeriods().size() != 0)) {
                                             List<MiniMumNightStay> miniMumNightStayList = new ArrayList<>();
                                             hotel.getRoomClasses().forEach(roomClass -> {
                                                 MiniMumNightStay miniMumNightStay = new MiniMumNightStay();
@@ -544,8 +544,7 @@ public class Application {
                                             });
 
                                             System.out.println("hotel_id: " + hotelChildPolicy.getHotelId() + ", room_classes: " + hotel.getRoomClasses().size() + ", old_child_policy: " + _backendHotel.getChildPolicy().size() + ", new_child_policy: " + childPolicies.size());
-                                            AtomicInteger i = new AtomicInteger(0);
-                                            for (ChildPolicy childPolicy : childPolicies) {
+                                            AtomicInteger i = new AtomicInteger(0); for (ChildPolicy childPolicy : childPolicies) {
                                                 String input = "{\"type\":\"create_hotel_child_policy\",\"event_data\":{\"child_policy\":" + new Gson().toJson(childPolicy) + "}}";
                                                 JsonObject jsonChildPolicyResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotelChildPolicy.getHotelId() + "/child-policy?token=" + loginToken, input), JsonObject.class);
                                                 System.out.println("i: " + backendHotelMetadataCounter + ", hotel_id: " + hotelChildPolicy.getHotelId() + ", child_policy@: " + i.incrementAndGet() + ", child_policy_id: " + jsonChildPolicyResponse.get("id").toString() + ", status: " + jsonChildPolicyResponse.get("status").toString());
