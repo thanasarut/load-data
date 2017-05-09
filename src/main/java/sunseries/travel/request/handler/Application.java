@@ -449,7 +449,7 @@ public class Application {
                                     // TODO :: Add minimum_night_stay == doing parallels just put "if (0==1)" instead
                                     JsonObject checkMinimumNightStayAddedResponse = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/minimum-night-stay?token=" + loginToken), JsonObject.class);
                                     HotelMinimumNightStay hotelMinimumNightStay = new Gson().fromJson(checkMinimumNightStayAddedResponse.get("result"), HotelMinimumNightStay.class);
-                                    if (hotelMinimumNightStay.getHotelId() != null & ((hotelMinimumNightStay == null) || (hotelMinimumNightStay.getMiniMumNightStayList() == null) || (hotelMinimumNightStay.getMiniMumNightStayList().size() == 0))) {
+                                    if ((hotelMinimumNightStay == null) || (hotelMinimumNightStay.getMiniMumNightStayList() == null) || (hotelMinimumNightStay.getMiniMumNightStayList().size() == 0)) {
                                         if (!StringUtils.isEmpty(_backendHotel.getMinimumNightStayPeriods()) && (_backendHotel.getMinimumNightStayPeriods().size() != 0)) {
                                             List<MiniMumNightStay> miniMumNightStayList = new ArrayList<>();
                                             hotel.getRoomClasses().forEach(roomClass -> {
@@ -499,7 +499,7 @@ public class Application {
                                     // TODO :: Add child_policy == doing parallels just put "if (0==1)" instead
                                     JsonObject checkChildPolicyAddedResponse = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/child-policy?token=" + loginToken), JsonObject.class);
                                     HotelChildPolicy hotelChildPolicy = new Gson().fromJson(checkChildPolicyAddedResponse.get("result"), HotelChildPolicy.class);
-                                    if (hotelChildPolicy.getHotelId() != null & ((hotelChildPolicy == null) || (hotelChildPolicy.getChildPolicyList() == null) || (hotelChildPolicy.getChildPolicyList().size() == 0))) {
+                                    if ((hotelChildPolicy == null) || (hotelChildPolicy.getChildPolicyList() == null) || (hotelChildPolicy.getChildPolicyList().size() == 0)) {
                                         if (!StringUtils.isEmpty(_backendHotel.getChildPolicy())) {
                                             List<ChildPolicy> childPolicies = new ArrayList<>();
                                             hotel.getRoomClasses().forEach(roomClass -> {
