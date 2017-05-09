@@ -273,36 +273,37 @@ public class Application {
                         JsonObject jsonGetHotelResponse = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + _backendHotel.getFacadeId().replaceAll("\"","") + "?token=" + loginToken), JsonObject.class);
                         JsonObject jsonUpdateHotelResponse = null;
                         if (jsonGetHotelResponse.get("status").toString().equals("\"SUCCESS\"")) {
-                            //<editor-fold desc="REST API update 2nd-hotel_meta_data">
                             // start to copy each data from backend_hotel to hotel
                             Hotel hotel = new Gson().fromJson(jsonGetHotelResponse.get("hotel"), Hotel.class);
 
-                            if (_backendHotel.getChildPolicy() != null) {
-                                if (_backendHotel.getChildPolicy().get("age_to") != null) {
-                                    hotel.setChildrenAgeFrom(convertObjectToInt(_backendHotel.getChildPolicy().get("age_to")));
-                                }
-                                if (_backendHotel.getChildPolicy().get("age_from") != null) {
-                                    hotel.setChildrenAgeFrom(convertObjectToInt(_backendHotel.getChildPolicy().get("age_from")));
-                                } else {
+                            if (hotel.getRoomClasses() == null || hotel.getRoomClasses().size() == 0) {
+
+                                //<editor-fold desc="REST API update 2nd-hotel_meta_data">
+                                if (_backendHotel.getChildPolicy() != null) {
                                     if (_backendHotel.getChildPolicy().get("age_to") != null) {
-                                        hotel.setChildrenAgeFrom(0);
+                                        hotel.setChildrenAgeFrom(convertObjectToInt(_backendHotel.getChildPolicy().get("age_to")));
+                                    }
+                                    if (_backendHotel.getChildPolicy().get("age_from") != null) {
+                                        hotel.setChildrenAgeFrom(convertObjectToInt(_backendHotel.getChildPolicy().get("age_from")));
+                                    } else {
+                                        if (_backendHotel.getChildPolicy().get("age_to") != null) {
+                                            hotel.setChildrenAgeFrom(0);
+                                        }
                                     }
                                 }
-                            }
 
-                            hotel.setReservationEmail(_backendHotel.getReservationEmail());
-                            hotel.setOfficialEmail(_backendHotel.getOfficialEmail());
-                            hotel.setSalesEmail(_backendHotel.getSalesEmail());
+                                hotel.setReservationEmail(_backendHotel.getReservationEmail());
+                                hotel.setOfficialEmail(_backendHotel.getOfficialEmail());
+                                hotel.setSalesEmail(_backendHotel.getSalesEmail());
 
-                            String newHoteljSon = new Gson().toJson(hotel);
-                            // update hotel data with old data
-                            String payload = "{\"type\":\"update_hotel\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\":" + newHoteljSon + "}}";
-                            jsonUpdateHotelResponse = new Gson().fromJson(doHttpPatchClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId().replaceAll("\"","") + "?token=" + loginToken, payload), JsonObject.class);
-                            System.out.println("i: " + backendHotelMetadataCounter + ", id: " + jsonUpdateHotelResponse.get("id").toString() + ", hotel_update_backend status: " + jsonUpdateHotelResponse.get("status").toString());
-                            sleep(100);
-                            //</editor-fold>
+                                String newHoteljSon = new Gson().toJson(hotel);
+                                // update hotel data with old data
+                                String payload = "{\"type\":\"update_hotel\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\":" + newHoteljSon + "}}";
+                                jsonUpdateHotelResponse = new Gson().fromJson(doHttpPatchClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId().replaceAll("\"", "") + "?token=" + loginToken, payload), JsonObject.class);
+                                System.out.println("i: " + backendHotelMetadataCounter + ", id: " + jsonUpdateHotelResponse.get("id").toString() + ", hotel_update_backend status: " + jsonUpdateHotelResponse.get("status").toString());
+                                sleep(100);
+                                //</editor-fold>
 
-                            if (hotel.getRoomClasses() == null || hotel.getRoomClasses().size() == 0) {
                                 //<editor-fold desc="Rest API to add room_class">
                                 if (_backendHotel.getRoomClasses() != null) {
                                     List<RoomClass> roomClassList = new ArrayList<>();
@@ -310,7 +311,7 @@ public class Application {
                                     for (Map<String, Object> _roomClasses : _backendHotel.getRoomClasses()) {
                                         _rcm_counter++;
                                         RoomClass roomClass = new RoomClass();
-                                        if (_roomClasses.get("id").equals("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d",_rcm_counter))) {
+                                        if (_roomClasses.get("id").equals("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter))) {
                                             // in case that never load data of room classes to new version
 
                                             roomClass.setRoomClassName(_roomClasses.get("name").toString());
@@ -395,6 +396,7 @@ public class Application {
                                     // old data not specify room_classes
                                 }
                                 //</editor-fold>
+
                             } else {
                                 //<editor-fold desc="REST API 3rd - cancellation_policy, minimum_night_stay, child_policy parallels">
 
