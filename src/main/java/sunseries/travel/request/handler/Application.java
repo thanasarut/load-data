@@ -189,45 +189,46 @@ public class Application {
                             _marketList.forEach(_market -> {
                                 _market.getRoom().forEach(_periodRate -> {
                                     BaseRate baseRate = new BaseRate();
-                                    baseRate.setMarket(_market.getMarket());
                                     if (_periodRate.getValid_period() != null) {
                                         baseRate.setFromDate(transformOldDateToString(_periodRate.getValid_period().get("from")));
                                         baseRate.setToDate(transformOldDateToString(_periodRate.getValid_period().get("to")));
+
+                                        baseRate.setMarket(_market.getMarket());
+                                        baseRate.setWeekdays(_periodRate.getValidDay());
+                                        baseRate.setRoomRate(String.format("%1$.2f", _periodRate.getAmount().getSatang() / 100.0));
+                                        baseRate.setCurrencyCode(_periodRate.getAmount().getCurrency());
+                                        baseRate.setRoomClass(_hotel_base_rate_id);
+
+                                        SaleMarkup saleMarkup = new SaleMarkup();
+                                        String[] _markupValue = _periodRate.getSaleMarkup().getName().split("::");
+                                        saleMarkup.setType(CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, _markupValue[_markupValue.length - 1]));
+                                        baseRate.setSaleMarkup(saleMarkup);
+
+                                        if (_market.getBreakFast() == null) {
+                                            baseRate.setBreakfastRate("-1");
+                                        } else {
+                                            _market.getBreakFast().forEach(_breakfastPeriod -> {
+                                                if (transformOldDateToString(_breakfastPeriod.getValid_period().get("from")).equals(baseRate.getFromDate())
+                                                        && transformOldDateToString(_breakfastPeriod.getValid_period().get("to")).equals(baseRate.getToDate())) {
+                                                    baseRate.setBreakfastRate(String.format("%1$.2f", _breakfastPeriod.getAmount().getSatang() / 100.0));
+                                                }
+                                            });
+                                        }
+                                        if (_market.getExtraBed() == null) {
+                                            baseRate.setExtraBedRate("-1");
+                                        } else {
+                                            _market.getExtraBed().forEach(_extraBedPeriod -> {
+                                                if (transformOldDateToString(_extraBedPeriod.getValid_period().get("from")).equals(baseRate.getFromDate())
+                                                        && transformOldDateToString(_extraBedPeriod.getValid_period().get("to")).equals(baseRate.getToDate())) {
+                                                    baseRate.setExtraBedRate(String.format("%1$.2f", _extraBedPeriod.getAmount().getSatang() / 100.0));
+                                                }
+                                            });
+                                        }
+
+                                        baseRatesList.add(baseRate);
                                     } else {
                                         // not found valid_period --> have only period that is very old data, martin confirm to not load to v.3
                                     }
-                                    baseRate.setWeekdays(_periodRate.getValidDay());
-                                    baseRate.setRoomRate(String.format("%1$.2f",_periodRate.getAmount().getSatang()/100.0));
-                                    baseRate.setCurrencyCode(_periodRate.getAmount().getCurrency());
-                                    baseRate.setRoomClass(_hotel_base_rate_id);
-
-                                    SaleMarkup saleMarkup = new SaleMarkup();
-                                    String[] _markupValue = _periodRate.getSaleMarkup().getName().split("::");
-                                    saleMarkup.setType(CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, _markupValue[_markupValue.length-1]));
-                                    baseRate.setSaleMarkup(saleMarkup);
-
-                                    if (_market.getBreakFast() == null) {
-                                        baseRate.setBreakfastRate("-1");
-                                    } else {
-                                        _market.getBreakFast().forEach(_breakfastPeriod -> {
-                                            if (transformOldDateToString(_breakfastPeriod.getValid_period().get("from")).equals(baseRate.getFromDate())
-                                                    && transformOldDateToString(_breakfastPeriod.getValid_period().get("to")).equals(baseRate.getToDate())) {
-                                                baseRate.setBreakfastRate(String.format("%1$.2f", _breakfastPeriod.getAmount().getSatang() / 100.0));
-                                            }
-                                        });
-                                    }
-                                    if (_market.getExtraBed() == null) {
-                                        baseRate.setExtraBedRate("-1");
-                                    } else {
-                                        _market.getExtraBed().forEach(_extraBedPeriod -> {
-                                            if (transformOldDateToString(_extraBedPeriod.getValid_period().get("from")).equals(baseRate.getFromDate())
-                                                    && transformOldDateToString(_extraBedPeriod.getValid_period().get("to")).equals(baseRate.getToDate())) {
-                                                baseRate.setExtraBedRate(String.format("%1$.2f", _extraBedPeriod.getAmount().getSatang() / 100.0));
-                                            }
-                                        });
-                                    }
-
-                                    baseRatesList.add(baseRate);
                                 });
                             });
 
