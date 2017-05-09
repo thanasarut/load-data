@@ -400,7 +400,7 @@ public class Application {
                             } else {
                                 //<editor-fold desc="REST API 3rd - cancellation_policy, minimum_night_stay, child_policy parallels">
 
-                                if (1==1) {
+                                if (1==0) {
                                     //<editor-fold desc="REST API add cancellation_policy">
                                     // TODO :: Add cancellation_policy == doing parallel just put "if (0==1)" instead
                                     // check if already add cancellation_policy for this hotel_id or not?
@@ -496,7 +496,7 @@ public class Application {
                                     //</editor-fold>
                                 }
 
-                                if (1==0) {
+                                if (1==1) {
                                     //<editor-fold desc="REST API add child_policy">
                                     // TODO :: Add child_policy == doing parallels just put "if (0==1)" instead
                                     JsonObject checkChildPolicyAddedResponse = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/child-policy?token=" + loginToken), JsonObject.class);
@@ -514,7 +514,7 @@ public class Application {
                                                     }
 
                                                     if (!StringUtils.isEmpty(_backendHotel.getChildPolicy().get("extra_bed_rate_adjustment"))) {
-                                                        childPolicy.setExtraBedRate(convertObjectToInt(_backendHotel.getChildPolicy().get("extra_bed_adjustment")).toString());
+                                                        childPolicy.setExtraBedRate(convertObjectToInt(_backendHotel.getChildPolicy().get("extra_bed_rate_adjustment")).toString());
                                                     } else {
                                                         // TODO :: confirm with jack found json "extra_bed_rate_adjustment" = "" in v.2 how v.3 will put
                                                     }
