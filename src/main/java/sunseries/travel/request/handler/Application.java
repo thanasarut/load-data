@@ -276,6 +276,112 @@ public class Application {
                             // start to copy each data from backend_hotel to hotel
                             Hotel hotel = new Gson().fromJson(jsonGetHotelResponse.get("hotel"), Hotel.class);
 
+                            if (!StringUtils.isEmpty(_backendHotel.getImages()) && (_backendHotel.getImages().size() != 0)) {
+                                //<editor-fold desc="REST APT 3rd-hotel_meta_data for images">
+                                if (_backendHotel.getImages().get(0).getImageUrl().getClass().equals(String.class)) {
+                                    List<Image> imageList = new ArrayList<>();
+                                    _backendHotel.getImages().forEach(_image -> {
+                                        Image image = new Image();
+                                        Boolean isDataProblem = false;
+                                        //<editor-fold desc="validatation data and copy to new object">
+                                        if (!StringUtils.isEmpty(_image.getId())) {
+                                            image.setId(_image.getId());
+                                        } else {
+                                            // data problem
+                                            isDataProblem = true;
+                                        }
+                                        if (!StringUtils.isEmpty(_image.getIsPrimary().toString())) {
+                                            image.setIsPrimary(Boolean.parseBoolean(_image.getIsPrimary().toString()));
+                                        } else {
+                                            // data problem
+                                            isDataProblem = true;
+                                        }
+                                        if (!StringUtils.isEmpty(_image.getImageUrl())) {
+                                            image.setImageUrl(_image.getImageUrl().toString());
+                                        } else {
+                                            // data problem
+                                            isDataProblem = true;
+                                        }
+                                        if (!StringUtils.isEmpty(_image.getCloudinaryName())) {
+                                            image.setCloudinaryName(_image.getCloudinaryName());
+                                        } else {
+                                            // data problem
+                                            isDataProblem = true;
+                                        }
+                                        if (!StringUtils.isEmpty(_image.getThumbnailUrl())) {
+                                            image.setThumbnailUrl(_image.getThumbnailUrl().toString());
+                                        } else {
+                                            // data problem
+                                            isDataProblem = true;
+                                        }
+                                        if (!StringUtils.isEmpty(_image.getPublicId())) {
+                                            image.setPublicId(_image.getPublicId());
+                                        } else {
+                                            // data problem
+                                            isDataProblem = true;
+                                        }
+                                        //</editor-fold>
+                                        if (!isDataProblem) {
+                                            imageList.add(image);
+                                        } else {
+                                            // write to file or something
+                                        }
+                                    });
+
+                                    // update hotel data with old data
+                                    String payload = "{\"type\":\"update_hotel\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\": { \"hotel_id\":\"" + hotel.getHotelId() + "\", \"images\":" + new Gson().toJson(imageList) + "}}}";
+                                    jsonUpdateHotelResponse = new Gson().fromJson(doHttpPatchClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId().replaceAll("\"", "") + "?token=" + loginToken, payload), JsonObject.class);
+                                    System.out.println("i: " + backendHotelMetadataCounter + ", id: " + jsonUpdateHotelResponse.get("id").toString() + ", hotel_update_backend status: " + jsonUpdateHotelResponse.get("status").toString());
+                                    sleep(50);
+                                } else if (_backendHotel.getImages().get(0).getImageUrl().getClass().equals(LinkedTreeMap.class)) {
+                                    List<ImageAmazon> imageList = new ArrayList<>();
+                                    _backendHotel.getImages().forEach(_image -> {
+                                        ImageAmazon image = new ImageAmazon();
+                                        Boolean isDataProblem = false;
+                                        //<editor-fold desc="validatation data and copy to new object">
+                                        if (!StringUtils.isEmpty(_image.getId())) {
+                                            image.setId(_image.getId());
+                                        } else {
+                                            // data problem
+                                            isDataProblem = true;
+                                        }
+                                        if (!StringUtils.isEmpty(_image.getIsPrimary().toString())) {
+                                            image.setPrimary(Boolean.parseBoolean(_image.getIsPrimary().toString()));
+                                        } else {
+                                            // data problem
+                                            isDataProblem = true;
+                                        }
+                                        if (!StringUtils.isEmpty(_image.getImageUrl())) {
+                                            UrlAmazon _url = new Gson().fromJson(new Gson().toJson(_image.getImageUrl()), UrlAmazon.class);
+                                            image.setImageUrl(_url);
+                                        } else {
+                                            // data problem
+                                            isDataProblem = true;
+                                        }
+                                        if (!StringUtils.isEmpty(_image.getThumbnailUrl())) {
+                                            UrlAmazon _url = new Gson().fromJson(new Gson().toJson(_image.getThumbnailUrl()), UrlAmazon.class);
+                                            image.setThumbnailUrl(_url);
+                                        } else {
+                                            // data problem
+                                            isDataProblem = true;
+                                        }
+                                        //</editor-fold>
+                                        if (!isDataProblem) {
+                                            imageList.add(image);
+                                        } else {
+                                            // write to file or something
+                                        }
+                                    });
+
+                                    // update hotel data with old data
+                                    String payload = "{\"type\":\"update_hotel\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\": { \"hotel_id\":\"" + hotel.getHotelId() + "\", \"images_amazon\":" + new Gson().toJson(imageList) + "}}}";
+                                    jsonUpdateHotelResponse = new Gson().fromJson(doHttpPatchClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId().replaceAll("\"", "") + "?token=" + loginToken, payload), JsonObject.class);
+                                    System.out.println("i: " + backendHotelMetadataCounter + ", id: " + jsonUpdateHotelResponse.get("id").toString() + ", hotel_update_backend status: " + jsonUpdateHotelResponse.get("status").toString());
+                                    sleep(50);
+                                }
+                                //</editor-fold>
+                            }
+
                             if (hotel.getRoomClasses() == null || hotel.getRoomClasses().size() == 0) {
 
                                 //<editor-fold desc="REST API update 2nd-hotel_meta_data">
@@ -496,7 +602,7 @@ public class Application {
                                     //</editor-fold>
                                 }
 
-                                if (1==1) {
+                                if (1==0) {
                                     //<editor-fold desc="REST API add child_policy">
                                     // TODO :: Add child_policy == doing parallels just put "if (0==1)" instead
                                     JsonObject checkChildPolicyAddedResponse = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/child-policy?token=" + loginToken), JsonObject.class);

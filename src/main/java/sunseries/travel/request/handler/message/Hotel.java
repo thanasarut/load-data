@@ -107,6 +107,14 @@ public class Hotel extends BaseDocument {
     @SerializedName("payee_id")
     private String payee;
 
+    @Expose
+    @SerializedName("images")
+    private List<Image> images;
+
+    @Expose
+    @SerializedName("images_amazon")
+    private List<ImageAmazon> imagesAmazon;
+
     public String getType() {
         return type;
     }
@@ -298,6 +306,22 @@ public class Hotel extends BaseDocument {
 
     public void setPayee(String payee) {
         this.payee = payee;
+    }
+
+    public List<Image> getImages() {
+        return images;
+    }
+
+    public void setImages(List<Image> images) {
+        this.images = images;
+    }
+
+    public List<ImageAmazon> getImagesAmazon() {
+        return imagesAmazon;
+    }
+
+    public void setImagesAmazon(List<ImageAmazon> imagesAmazon) {
+        this.imagesAmazon = imagesAmazon;
     }
 
     public String toJSONString() {

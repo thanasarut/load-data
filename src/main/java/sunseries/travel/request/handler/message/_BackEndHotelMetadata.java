@@ -37,13 +37,12 @@ public class _BackEndHotelMetadata implements Serializable {
     private List<Map<String, Object>> amenities;
     @SerializedName("remarks")
     private Object remarks;
-    //private List<Map<String, Object>> remarks;
     @SerializedName("longitude")
     private String longitude;
     @SerializedName("latitude")
     private String latitude;
     @SerializedName("images")
-    private List<Map<String, Object>> images;
+    private List<_Image> images;
     @SerializedName("room_count")
     private Integer roomCount;
     @SerializedName("service_id")
@@ -51,7 +50,6 @@ public class _BackEndHotelMetadata implements Serializable {
 
     @SerializedName("room_classes")
     private List<Map<String, Object>> roomClasses;
-    // recheck child_policy
     @SerializedName("child_policy")
     private Map<String, Object> childPolicy;
     @SerializedName("reservation_email")
@@ -223,11 +221,11 @@ public class _BackEndHotelMetadata implements Serializable {
         this.latitude = latitude;
     }
 
-    public List<Map<String, Object>> getImages() {
+    public List<_Image> getImages() {
         return images;
     }
 
-    public void setImages(List<Map<String, Object>> images) {
+    public void setImages(List<_Image> images) {
         this.images = images;
     }
 
@@ -255,14 +253,6 @@ public class _BackEndHotelMetadata implements Serializable {
         this.roomClasses = roomClasses;
     }
 
-    /*public Map<String, Object> getChildPolicy() {
-        return childPolicy;
-    }
-
-    public void setChildPolicy(Map<String, Object> childPolicy) {
-        this.childPolicy = childPolicy;
-    }
-*/
     public String getReservationEmail() {
         return reservationEmail;
     }

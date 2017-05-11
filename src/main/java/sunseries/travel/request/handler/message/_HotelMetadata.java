@@ -33,7 +33,6 @@ public class _HotelMetadata implements Serializable {
     private List<Map<String, Object>> amenities;
     @SerializedName("remarks")
     private Object remarks;
-    //private List<Map<String, Object>> remarks;
     @SerializedName("longitude")
     private String longitude;
     @SerializedName("latitude")
