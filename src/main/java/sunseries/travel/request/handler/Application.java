@@ -685,7 +685,7 @@ public class Application {
                                                 } else {
                                                     isDataProblem = true;
                                                     option.setMarket("Market::1");
-                                                    writeToFileApacheCommonIO(hotel.getHotelId(), optionsProblemFile);
+                                                    writeToFileApacheCommonIO(hotel.getHotelId() + System.lineSeparator(), optionsProblemFile);
                                                     isDataProblem = false;
                                                 }
                                                 //</editor-fold>
