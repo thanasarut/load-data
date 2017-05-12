@@ -95,6 +95,8 @@ public class Application {
                     jsonString = jsonString.replace("\"stars\":([0-9])", "\"stars\":\"$1\"");
                     //</editor-fold>
 
+                    System.out.println(jsonString);
+
                     _HotelMetadata _hotel = new Gson().fromJson(jsonString, _HotelMetadata.class);
                     if (_hotel != null) {
                         hotelMetadataCounter++;
@@ -103,7 +105,7 @@ public class Application {
                         String newHoteljSon = new Gson().toJson(hotel);
 
                         // if hotelMetada already add then skipped
-                        JsonObject jsonHotelResponseData = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + _hotel.getId().replaceAll("\"","") + "?token=" + loginToken), JsonObject.class);
+                        JsonObject jsonHotelResponseData = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + _hotel.getId().replaceAll("\"", "") + "?token=" + loginToken), JsonObject.class);
                         if (jsonHotelResponseData.get("status").toString().equals("\"SUCCESS\"")) {
                             continue;
                         }
@@ -114,6 +116,9 @@ public class Application {
                             JsonObject jsonAddHotelResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels?token=" + loginToken, payload), JsonObject.class);
                             System.out.println("i: " + hotelMetadataCounter + ", id: " + jsonAddHotelResponse.get("id").toString() + ", add_hotel status: " + jsonAddHotelResponse.get("status").toString());
                             //System.out.println(i);
+
+                            // add delay for couchbase
+                            sleep(300);
                         } else {
                             // no _hotel_id X no need to add empty hotel
                             String payload = "{\"type\":\"create_hotel\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\":{\"hotel_name\":\"dummy\"}}}";
@@ -122,7 +127,7 @@ public class Application {
                             //System.out.println("dummy: " + i);
 
                             // add delay for couchbase
-                            sleep(300);
+                            sleep(50);
 
                             // real information
                             hotelMetadataCounter++;
@@ -130,6 +135,9 @@ public class Application {
                             jsonAddHotelResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels?token=" + loginToken, payload), JsonObject.class);
                             System.out.println("i: " + hotelMetadataCounter + ", id: " + jsonAddHotelResponse.get("id").toString() + ", add_hotel status: " + jsonAddHotelResponse.get("status").toString());
                             //System.out.println(i);
+
+                            // add delay for couchbase
+                            sleep(300);
 
                             // delete dummy information
                             /*stringHttpResponse = doHttpDeleteClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + dummyId.replaceAll("\"","") + "?token=" + loginToken);
@@ -139,8 +147,6 @@ public class Application {
                     } else {
                         hotelMetadataFailedCounter++;
                     }
-                    // add delay for couchbase
-                    sleep(300);
                     //</editor-fold>
                 } else if (hotelBaseRateDataPattern.matcher(readLine).find()) {
                     //<editor-fold desc="RESP API hotel_base_rate">
