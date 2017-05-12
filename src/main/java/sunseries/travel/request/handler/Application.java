@@ -402,6 +402,14 @@ public class Application {
                                 hotel.setReservationEmail(_backendHotel.getReservationEmail());
                                 hotel.setOfficialEmail(_backendHotel.getOfficialEmail());
                                 hotel.setSalesEmail(_backendHotel.getSalesEmail());
+                                if (!StringUtils.isEmpty(_backendHotel.getRemarks())) {
+                                    List<String> remarkList = new ArrayList<>();
+                                    ((List<Map<String, Object>>) _backendHotel.getRemarks()).forEach(map -> {
+                                                remarkList.add(map.get("description").toString());
+                                            }
+                                    );
+                                    hotel.setRemark(remarkList);
+                                }
 
                                 String newHoteljSon = new Gson().toJson(hotel);
                                 // update hotel data with old data
@@ -628,7 +636,7 @@ public class Application {
                                     //</editor-fold>
                                 }
 
-                                if (1==1) {
+                                if (1==0) {
                                     //<editor-fold desc="REST API add hotel_options">
                                     // TODO :: Add hotel_options == doing parallels just put "if (0==1)" instead
                                     JsonObject checkHotelOptionAddedResponse = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/option?token=" + loginToken), JsonObject.class);
@@ -790,6 +798,9 @@ public class Application {
         hotel.setStar(_hotel.getStars().toString());
         hotel.setTelephone(_hotel.getTelephone());
         hotel.setAddress(_hotel.getAddress());
+        if (!StringUtils.isEmpty(_hotel.getFax())) {
+            hotel.setFax(_hotel.getFax());
+        }
         List<String> amenitiesList = new ArrayList<>();
         if (_hotel.getAmenities() != null) {
             _hotel.getAmenities()
