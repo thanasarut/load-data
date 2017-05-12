@@ -36,6 +36,7 @@ public class Application {
 
         File roomClassBedTypeProblemFile = new File("./roomClassBedTypeProblem.txt");
         File childPolicyProblemFile = new File("./childPolicyProblem.txt");
+        File optionsProblemFile = new File("./optionProblem.txt");
 
         //<editor-fold desc="grep begin pattern">
         // Pattern of Hotel Metadata -- It will start with "sunsXXXX" hotel_id
@@ -278,7 +279,7 @@ public class Application {
 
                             if (!StringUtils.isEmpty(_backendHotel.getImages()) && (_backendHotel.getImages().size() != 0)) {
                                 //<editor-fold desc="REST APT 3rd-hotel_meta_data for images">
-                                if (_backendHotel.getImages().get(0).getImageUrl().getClass().equals(String.class)) {
+                                if (_backendHotel.getImages().get(0).getImageUrl().getClass().equals(String.class) && StringUtils.isEmpty(hotel.getImages())) {
                                     List<Image> imageList = new ArrayList<>();
                                     _backendHotel.getImages().forEach(_image -> {
                                         Image image = new Image();
@@ -331,9 +332,9 @@ public class Application {
                                     // update hotel data with old data
                                     String payload = "{\"type\":\"update_hotel\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\": { \"hotel_id\":\"" + hotel.getHotelId() + "\", \"images\":" + new Gson().toJson(imageList) + "}}}";
                                     jsonUpdateHotelResponse = new Gson().fromJson(doHttpPatchClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId().replaceAll("\"", "") + "?token=" + loginToken, payload), JsonObject.class);
-                                    System.out.println("i: " + backendHotelMetadataCounter + ", id: " + jsonUpdateHotelResponse.get("id").toString() + ", hotel_update_backend status: " + jsonUpdateHotelResponse.get("status").toString());
+                                    System.out.println("i: " + backendHotelMetadataCounter + ", id: " + jsonUpdateHotelResponse.get("id").toString() + ", hotel_update_backend :: add images status: " + jsonUpdateHotelResponse.get("status").toString());
                                     sleep(50);
-                                } else if (_backendHotel.getImages().get(0).getImageUrl().getClass().equals(LinkedTreeMap.class)) {
+                                } else if (_backendHotel.getImages().get(0).getImageUrl().getClass().equals(LinkedTreeMap.class) && StringUtils.isEmpty(hotel.getImagesAmazon())) {
                                     List<ImageAmazon> imageList = new ArrayList<>();
                                     _backendHotel.getImages().forEach(_image -> {
                                         ImageAmazon image = new ImageAmazon();
@@ -376,7 +377,7 @@ public class Application {
                                     // update hotel data with old data
                                     String payload = "{\"type\":\"update_hotel\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\": { \"hotel_id\":\"" + hotel.getHotelId() + "\", \"images_amazon\":" + new Gson().toJson(imageList) + "}}}";
                                     jsonUpdateHotelResponse = new Gson().fromJson(doHttpPatchClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId().replaceAll("\"", "") + "?token=" + loginToken, payload), JsonObject.class);
-                                    System.out.println("i: " + backendHotelMetadataCounter + ", id: " + jsonUpdateHotelResponse.get("id").toString() + ", hotel_update_backend status: " + jsonUpdateHotelResponse.get("status").toString());
+                                    System.out.println("i: " + backendHotelMetadataCounter + ", id: " + jsonUpdateHotelResponse.get("id").toString() + ", hotel_update_backend :: add images status: " + jsonUpdateHotelResponse.get("status").toString());
                                     sleep(50);
                                 }
                                 //</editor-fold>
@@ -610,46 +611,6 @@ public class Application {
                                     if ((hotelChildPolicy == null) || (hotelChildPolicy.getChildPolicyList() == null) || (hotelChildPolicy.getChildPolicyList().size() == 0)) {
                                         if (!StringUtils.isEmpty(_backendHotel.getChildPolicy())) {
                                             List<ChildPolicy> childPolicies = new ArrayList<>();
-                                            hotel.getRoomClasses().forEach(roomClass -> {
-                                                ChildPolicy childPolicy = new ChildPolicy();
-                                                if (!StringUtils.isEmpty(_backendHotel.getChildPolicy())) {
-                                                    if (!StringUtils.isEmpty(_backendHotel.getChildPolicy().get("breakfast_rate_adjustment"))) {
-                                                        childPolicy.setBreakfastRate(convertObjectToInt(_backendHotel.getChildPolicy().get("breakfast_rate_adjustment")).toString());
-                                                    } else {
-                                                        // TODO :: confirm with jack found json "breakfast_rate_adjustment" = "" in v.2 how v.3 will put
-                                                    }
-
-                                                    if (!StringUtils.isEmpty(_backendHotel.getChildPolicy().get("extra_bed_rate_adjustment"))) {
-                                                        childPolicy.setExtraBedRate(convertObjectToInt(_backendHotel.getChildPolicy().get("extra_bed_rate_adjustment")).toString());
-                                                    } else {
-                                                        // TODO :: confirm with jack found json "extra_bed_rate_adjustment" = "" in v.2 how v.3 will put
-                                                    }
-
-                                                    childPolicy.setFromDate("2017-01-01");
-                                                    childPolicy.setToDate("2017-12-31");
-
-                                                    if (!StringUtils.isEmpty(_backendHotel.getChildPolicy().get("breakfast_is_compulsory"))) {
-                                                        childPolicy.setBreakfastIsCompulsory(Boolean.parseBoolean(_backendHotel.getChildPolicy().get("breakfast_is_compulsory").toString()));
-                                                    } else {
-                                                        // TODO :: confirm with jack found json "breakfast_is_compulsory" = "" in v.2 how to put in v.3
-                                                    }
-
-                                                    if (!StringUtils.isEmpty(_backendHotel.getChildPolicy().get("extra_bed_is_compulsory"))) {
-                                                        childPolicy.setExtraBedIsCompulsory(Boolean.parseBoolean(_backendHotel.getChildPolicy().get("extra_bed_is_compulsory").toString()));
-                                                    } else {
-                                                        // TODO :: confirm with jack found json "extra_bed_is_compulsory" = "" in v.2 how to put in v.3
-                                                    }
-
-                                                    if (!StringUtils.isEmpty(_backendHotel.getChildPolicy().get("currency_code"))) {
-                                                        childPolicy.setCurrencyCode(_backendHotel.getChildPolicy().get("currency_code").toString());
-                                                    } else {
-                                                        // TODO :: confirm with jack found json "currency_code" = "" in v.2 how to put in v.3
-                                                    }
-                                                    childPolicies.add(childPolicy);
-                                                } else {
-                                                    // v2 no any specify child_policy
-                                                }
-                                            });
 
                                             System.out.println("hotel_id: " + hotel.getHotelId() + ", room_classes: " + hotel.getRoomClasses().size() + ", old_child_policy: " + _backendHotel.getChildPolicy().size() + ", new_child_policy: " + childPolicies.size());
                                             AtomicInteger i = new AtomicInteger(0); for (ChildPolicy childPolicy : childPolicies) {
@@ -662,7 +623,103 @@ public class Application {
                                             // v2 no any specify minimum_night_stay
                                         }
                                     } else {
-                                        // // already load minimum night stay
+                                        // already load minimum night stay
+                                    }
+                                    //</editor-fold>
+                                }
+
+                                if (1==1) {
+                                    //<editor-fold desc="REST API add hotel_options">
+                                    // TODO :: Add hotel_options == doing parallels just put "if (0==1)" instead
+                                    JsonObject checkHotelOptionAddedResponse = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/option?token=" + loginToken), JsonObject.class);
+                                    HotelOption hotelOption = new Gson().fromJson(checkHotelOptionAddedResponse.get("result"), HotelOption.class);
+                                    if ((hotelOption == null) || (hotelOption.getOptionList() == null) || (hotelOption.getOptionList().size() == 0)) {
+                                        if (!StringUtils.isEmpty(_backendHotel.getOptions()) && (_backendHotel.getOptions().size() != 0)) {
+                                            List<Option> optionList = new ArrayList<>();
+                                            _backendHotel.getOptions().forEach(_option -> {
+                                                //<editor-fold desc="validate data and copy to new object">
+                                                Option option = new Option();
+                                                Boolean isDataProblem = false;
+                                                if (!StringUtils.isEmpty(_option.getName())) {
+                                                    option.setName(_option.getName().toString());
+                                                } else {
+                                                    isDataProblem = true;
+                                                }
+                                                if (!StringUtils.isEmpty(_option.getRate())) {
+                                                    option.setRate(String.format("%1$.2f", _option.getRate().getAmount().getSatang() / 100.0));
+                                                    option.setCurrencyCode(_option.getRate().getAmount().getCurrency().toString());
+                                                } else {
+                                                    isDataProblem = true;
+                                                }
+                                                if (!StringUtils.isEmpty(_option.getAppliesTo())) {
+                                                    option.setAppliesTo(_option.getAppliesTo().toString());
+                                                } else {
+                                                    isDataProblem = true;
+                                                }
+                                                if (!StringUtils.isEmpty(_option.getAppliesEvery())) {
+                                                    option.setAppliesEvery(_option.getAppliesEvery().toString());
+                                                } else {
+                                                    isDataProblem = true;
+                                                }
+                                                if (!StringUtils.isEmpty(_option.isCompulsory())) {
+                                                    option.setCompulsory(_option.isCompulsory());
+                                                } else {
+                                                    isDataProblem = true;
+                                                }
+                                                if (!StringUtils.isEmpty(_option.getPeriod())) {
+                                                    if (!StringUtils.isEmpty(transformOldDateToString(_option.getPeriod().get("from")))) {
+                                                        option.setFromDate(transformOldDateToString(_option.getPeriod().get("from")));
+                                                    } else {
+                                                        isDataProblem = true;
+                                                    }
+                                                    if (!StringUtils.isEmpty(transformOldDateToString(_option.getPeriod().get("to")))) {
+                                                        option.setToDate(transformOldDateToString(_option.getPeriod().get("to")));
+                                                    } else {
+                                                        isDataProblem = true;
+                                                    }
+                                                } else {
+                                                    isDataProblem = true;
+                                                }
+                                                if (!StringUtils.isEmpty(_option.getMarket())) {
+                                                    option.setMarket(_option.getMarket().toString());
+                                                } else {
+                                                    isDataProblem = true;
+                                                    option.setMarket("Market::1");
+                                                    writeToFileApacheCommonIO(hotel.getHotelId(), optionsProblemFile);
+                                                    isDataProblem = false;
+                                                }
+                                                //</editor-fold>
+                                                if (!isDataProblem) {
+                                                    // only for room_class if not specify means all room_class
+                                                    if (!StringUtils.isEmpty(_option.getRoomClass())) {
+                                                        option.setRoomClass(_option.getRoomClass().toString());
+                                                        optionList.add(option);
+                                                    } else {
+                                                        hotel.getRoomClasses().forEach(roomClass -> {
+                                                            option.setRoomClass(roomClass.getRoomClassName());
+                                                            optionList.add(option);
+                                                        });
+                                                    }
+                                                } else {
+                                                    // write to file or something
+                                                    writeToFileApacheCommonIO(hotel.getHotelId(), optionsProblemFile);
+                                                }
+                                            });
+
+                                            System.out.println("hotel_id: " + hotel.getHotelId() + ", old_options: " + _backendHotel.getOptions().size());
+                                            AtomicInteger i = new AtomicInteger(0);
+                                            //for (MiniMumNightStay miniMumNightStay : miniMumNightStayList) {
+                                            for (Option option : optionList) {
+                                                String input = "{\"type\":\"create_hotel_option\",\"origin\":\"ms-load-data\",\"event_data\":{\"option\":" + new Gson().toJson(option) + "}}";
+                                                JsonObject jsonOptionsResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/option?token=" + loginToken, input), JsonObject.class);
+                                                System.out.println("i: " + backendHotelMetadataCounter + ", hotel_id: " + hotel.getHotelId() + ", option@: " + i.incrementAndGet() + ", option_id: " + jsonOptionsResponse.get("id").toString() + ", status: " + jsonOptionsResponse.get("status").toString());
+                                                sleep(50);
+                                            }
+                                        } else {
+                                            // v2 no any specify options
+                                        }
+                                    } else {
+                                        // already load options
                                     }
                                     //</editor-fold>
                                 }

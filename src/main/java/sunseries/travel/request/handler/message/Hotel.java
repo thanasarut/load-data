@@ -115,6 +115,10 @@ public class Hotel extends BaseDocument {
     @SerializedName("images_amazon")
     private List<ImageAmazon> imagesAmazon;
 
+    @Expose
+    @SerializedName("fax")
+    private String fax;
+
     public String getType() {
         return type;
     }
@@ -322,6 +326,14 @@ public class Hotel extends BaseDocument {
 
     public void setImagesAmazon(List<ImageAmazon> imagesAmazon) {
         this.imagesAmazon = imagesAmazon;
+    }
+
+    public String getFax() {
+        return fax;
+    }
+
+    public void setFax(String fax) {
+        this.fax = fax;
     }
 
     public String toJSONString() {
