@@ -702,13 +702,12 @@ public class Application {
                                                     }
                                                 } else {
                                                     // write to file or something
-                                                    writeToFileApacheCommonIO(hotel.getHotelId(), optionsProblemFile);
+                                                    writeToFileApacheCommonIO(hotel.getHotelId() + System.lineSeparator(), optionsProblemFile);
                                                 }
                                             });
 
                                             System.out.println("hotel_id: " + hotel.getHotelId() + ", old_options: " + _backendHotel.getOptions().size());
                                             AtomicInteger i = new AtomicInteger(0);
-                                            //for (MiniMumNightStay miniMumNightStay : miniMumNightStayList) {
                                             for (Option option : optionList) {
                                                 String input = "{\"type\":\"create_hotel_option\",\"origin\":\"ms-load-data\",\"event_data\":{\"option\":" + new Gson().toJson(option) + "}}";
                                                 JsonObject jsonOptionsResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/option?token=" + loginToken, input), JsonObject.class);
