@@ -10,6 +10,9 @@ public class _Area {
     @SerializedName("id")
     private String id;
 
+    @SerializedName("city_id")
+    private String cityId;
+
     @SerializedName("name")
     private String name;
 
@@ -49,5 +52,13 @@ public class _Area {
 
     public void setLongitude(String longitude) {
         this.longitude = longitude;
+    }
+
+    public String getCityId() {
+        return cityId;
+    }
+
+    public void setCityId(String cityId) {
+        this.cityId = cityId;
     }
 }

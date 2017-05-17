@@ -4,10 +4,12 @@ import com.google.common.base.CaseFormat;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.internal.LinkedTreeMap;
+import com.google.gson.reflect.TypeToken;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import org.apache.commons.io.FileUtils;
+import org.msgpack.util.json.JSON;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.util.StringUtils;
 import sunseries.travel.request.handler.message.*;
@@ -305,9 +307,9 @@ public class Application {
                                 Hotel hotel = new Gson().fromJson(jsonGetHotelResponse.get("hotel"), Hotel.class);
 
                                 if (!StringUtils.isEmpty(_backendHotel.getImages()) && (_backendHotel.getImages().size() != 0)) {
-                                    //<editor-fold desc="REST APT 3rd-hotel_meta_data for images">
-                                    //if (_backendHotel.getImages().get(0).getImageUrl().getClass().equals(String.class) && StringUtils.isEmpty(hotel.getImages())) {
-                                    if (_backendHotel.getImages().get(0).getImageUrl().getClass().equals(String.class) && hotel.getImages().size()==0) {
+                                    //<editor-fold desc="REST API 3rd-hotel_meta_data for images">
+                                    if (_backendHotel.getImages().get(0).getImageUrl().getClass().equals(String.class) && StringUtils.isEmpty(hotel.getImages())) {
+                                    //if (_backendHotel.getImages().get(0).getImageUrl().getClass().equals(String.class) && hotel.getImages().size()==0) {
                                         List<Image> imageList = new ArrayList<>();
                                         _backendHotel.getImages().forEach(_image -> {
                                             Image image = new Image();
@@ -344,9 +346,9 @@ public class Application {
                                         jsonUpdateHotelResponse = new Gson().fromJson(doHttpPatchClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId().replaceAll("\"", "") + "?token=" + loginToken, payload), JsonObject.class);
                                         System.out.println("i: " + backendHotelMetadataCounter + ", id: " + jsonUpdateHotelResponse.get("id").toString() + ", hotel_update_backend :: add images status: " + jsonUpdateHotelResponse.get("status").toString());
                                         sleep(50);
-                                    //} else if (_backendHotel.getImages().get(0).getImageUrl().getClass().equals(LinkedTreeMap.class) && StringUtils.isEmpty(hotel.getImages())) {
+                                    } else if (_backendHotel.getImages().get(0).getImageUrl().getClass().equals(LinkedTreeMap.class) && StringUtils.isEmpty(hotel.getImages())) {
                                     //} else if (_backendHotel.getImages().get(0).getImageUrl().getClass().equals(LinkedTreeMap.class) && (!StringUtils.isEmpty(hotel.getImages()) | hotel.getImages().size()==0)) {
-                                    } else if (_backendHotel.getImages().get(0).getImageUrl().getClass().equals(LinkedTreeMap.class)) {
+                                    //} else if (_backendHotel.getImages().get(0).getImageUrl().getClass().equals(LinkedTreeMap.class)) {
                                         List<Image> imageList = new ArrayList<>();
                                         _backendHotel.getImages().forEach(_image -> {
                                             Image image = new Image();
@@ -388,6 +390,33 @@ public class Application {
                                     }
                                     //</editor-fold>
                                 }
+
+                                if (!StringUtils.isEmpty(_backendHotel.getAreaId())) {
+                                    //<editor-fold desc="REST API 3rd-hotel_meta_data for area_id">
+                                    JsonObject jsonGetAreaNameResponse = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":8089/sunseries/v1/cities/" + hotel.getCity() + "/areas?token=" + loginToken2), JsonObject.class);
+                                    if (!StringUtils.isEmpty(jsonGetAreaNameResponse)) {
+                                        List<_Area> allArea = new Gson().fromJson(jsonGetAreaNameResponse.get("areas"), new TypeToken<List<_Area>>(){}.getType());
+                                        List<String> areas = new ArrayList<>();
+                                        allArea.stream().forEach(area -> {
+                                            if (_backendHotel.getAreaId().equals(area.getId().substring(6))) {
+                                                areas.add(area.getName());
+                                            }
+                                        });
+
+                                        if (areas.size() != 0) {
+                                            String payload = "{\"type\":\"update_hotel\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\": { \"hotel_id\": \"" + hotel.getHotelId() + "\", \"areas\": " + new Gson().toJson(areas) + "}}}";
+                                            jsonUpdateHotelResponse = new Gson().fromJson(doHttpPatchClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId().replaceAll("\"", "") + "?token=" + loginToken, payload), JsonObject.class);
+                                            System.out.println("i: " + backendHotelMetadataCounter + ", id: " + jsonUpdateHotelResponse.get("id").toString() + ", hotel_update_backend_area_added status: " + jsonUpdateHotelResponse.get("status").toString());
+                                            sleep(50);
+                                        } else {
+                                            System.out.println("not found area_id: " + _backendHotel.getAreaId().toString());
+                                        }
+                                    } else {
+                                        System.out.println("can't get area list");
+                                    }
+                                    //</editor-fold>
+                                }
+
 
                                 if (hotel.getRoomClasses() == null || hotel.getRoomClasses().size() == 0) {
 
@@ -744,12 +773,12 @@ public class Application {
                                 // can't found hotel_id on new version which we have backend_hotel data from old version
                                 backendHotelMetadataMissMatchCounter++;
                             }
-                            sleep(50);
+                            //sleep(50);
                         } else {
                             // failed to map json to _BackEndHotelMetadata
                             backendHotelMetadataFailedCounter++;
                         }
-                        sleep(50);
+                        //sleep(50);
                     }
                 }
 
