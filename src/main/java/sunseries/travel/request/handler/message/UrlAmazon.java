@@ -137,4 +137,8 @@ public class UrlAmazon {
     public void setRegistry(String registry) {
         this.registry = registry;
     }
+
+    public String toString() {
+        return this.scheme + "://" + this.host + this.path;
+    }
 }

@@ -112,10 +112,6 @@ public class Hotel extends BaseDocument {
     private List<Image> images;
 
     @Expose
-    @SerializedName("images_amazon")
-    private List<ImageAmazon> imagesAmazon;
-
-    @Expose
     @SerializedName("fax")
     private String fax;
 
@@ -318,14 +314,6 @@ public class Hotel extends BaseDocument {
 
     public void setImages(List<Image> images) {
         this.images = images;
-    }
-
-    public List<ImageAmazon> getImagesAmazon() {
-        return imagesAmazon;
-    }
-
-    public void setImagesAmazon(List<ImageAmazon> imagesAmazon) {
-        this.imagesAmazon = imagesAmazon;
     }
 
     public String getFax() {
