@@ -342,6 +342,7 @@ public class Application {
 
                         _BackEndHotelMetadata _backendHotel = new Gson().fromJson(jsonString, _BackEndHotelMetadata.class);
                         if (_backendHotel != null) {
+                            System.out.println(jsonString);
                             backendHotelMetadataCounter++;
                             // if hotelMetada already add then skipped
                             JsonObject jsonGetHotelResponse = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + _backendHotel.getFacadeId().replaceAll("\"", "") + "?token=" + loginToken), JsonObject.class);
@@ -371,10 +372,13 @@ public class Application {
                                     hotel.setSalesEmail(_backendHotel.getSalesEmail());
                                     if (!StringUtils.isEmpty(_backendHotel.getRemarks())) {
                                         List<String> remarkList = new ArrayList<>();
-                                        ((List<Map<String, Object>>) _backendHotel.getRemarks()).forEach(map -> {
-                                                    remarkList.add(map.get("description").toString());
-                                                }
-                                        );
+                                        if (_backendHotel.getRemarks().getClass().equals(String.class)) {
+                                            remarkList.add(_backendHotel.getRemarks().toString());
+                                        } else {
+                                            ((List<Map<String, Object>>) _backendHotel.getRemarks()).forEach(map -> {
+                                                remarkList.add(map.get("description").toString());
+                                            });
+                                        }
                                         hotel.setRemark(remarkList);
                                     }
 
