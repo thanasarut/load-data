@@ -27,12 +27,11 @@ import static java.lang.Thread.sleep;
 public class Application {
 
     public static void main(String[] args) throws InterruptedException {
-        List<String> list = new ArrayList<>();
-        List<String> list2 = new ArrayList<>();
         String serverHost = "127.0.0.1";
         String serverPort = "8080";
 
-        String fileName = "/Users/thanasarut/sunseries/source_load_data/hotelMetadata.sort.csv"; // 1st - hotel_meta_data
+        //String fileName = "/Users/thanasarut/sunseries/source_load_data/hotelMetadata.sort.csv"; // 1st - hotel_meta_data
+        String fileName = "/Users/thanasarut/sunseries/source_load_data/backend_hotel.new.csv"; // 2nd - additional hotel_meta_date with room_class
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/backend_hotel.csv"; // 2nd - additional hotel_meta_date with room_class
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/room_rate.sort.csv";
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/temp.csv";
@@ -43,6 +42,7 @@ public class Application {
         File roomClassBedTypeProblemFile = new File("./roomClassBedTypeProblem.txt");
         File childPolicyProblemFile = new File("./childPolicyProblem.txt");
         File optionsProblemFile = new File("./optionProblem.txt");
+        File hotelMetaDataProblemFile = new File("./hotelMetaDataProblem.txt");
 
         //<editor-fold desc="grep begin pattern HotelMetaData,BackendHotel,RoomRate">
         // Pattern of Hotel Metadata -- It will start with "sunsXXXX" hotel_id
@@ -77,7 +77,6 @@ public class Application {
         int hotelMetadataCounter = 0, hotelMetadataFailedCounter = 0;
         int backendHotelMetadataCounter = 0, backendHotelMetadataFailedCounter = 0, backendHotelMetadataMissMatchCounter = 0;
         int hotelBaseRateCounter = 0, hotelBaseRateFailedCounter = 0;
-        List<String> hotelWhichNotSpecifyBedTypeOrMaxOccu = new ArrayList<>();
 
         try {
             //<editor-fold desc="request for token">
@@ -111,48 +110,95 @@ public class Application {
             while ((readLine = b.readLine()) != null) {
                 // filter only match of pattern
                 if (1==1) {
-                    if (hotelMetaDataPattern.matcher(readLine).find()) {
+                    if (hotelMetaDataPattern.matcher(readLine).find() && false) {
                         //<editor-fold desc="Hotel meta data pattern using 'hotelMetadata.sort.csv' file only.">
                         //<editor-fold desc="fixed dirty data">
                         // extract field of value (which is field 4 of export.csv file
-                        System.out.println(readLine);
                         String[] tokens = readLine.split("^[\\w,]+\"|\"[,\\d]+$");
                         String jsonString = tokens[1].replaceAll("\"\"", "%@").replaceAll("%@", "\"");
-                        System.out.println(jsonString);
-                        /*String[] tokens = readLine.split(",\"\\{|}\",");
-                        String jsonString = "{" + tokens[1].replace("\"\"", "\"") + "}";*/
 
                         // fixed type remarks transform
-                        jsonString = jsonString.replace("\"remarks\":\"\"", "\"remarks\":null");
-                        jsonString = jsonString.replace("\"remarks\":[]", "\"remarks\":null");
                         jsonString = jsonString.replaceAll("\"remarks\":\"(.+)\",\"room_count", "\"remarks\":[{\"^o\": \"Sunseries::Domain::Model::Hotel::Remark\", \"description\": \"$1\", \"id\":\"\"}],\"room_count");
-                        // fixed type stars transform
-                        jsonString = jsonString.trim();
-                        jsonString = jsonString.replace("\"stars\":([0-9])", "\"stars\":\"$1\"");
                         //</editor-fold>
-
-                        System.out.println(jsonString);
 
                         _HotelMetadata _hotel = new Gson().fromJson(jsonString, _HotelMetadata.class);
                         if (_hotel != null) {
                             hotelMetadataCounter++;
                             System.out.println(jsonString);
                             Hotel hotel = transformHotel(_hotel);
-                            String newHoteljSon = new Gson().toJson(hotel);
+
+                            if (!StringUtils.isEmpty(_hotel.getAreaId())) {
+                                //<editor-fold desc="Add area_id">
+                                JsonObject jsonGetAreaNameResponse = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":8089/sunseries/v1/cities/" + hotel.getCity() + "/areas?token=" + loginToken2), JsonObject.class);
+                                if (!StringUtils.isEmpty(jsonGetAreaNameResponse)) {
+                                    List<_Area> allArea = new Gson().fromJson(jsonGetAreaNameResponse.get("areas"), new TypeToken<List<_Area>>(){}.getType());
+                                    List<String> areas = new ArrayList<>();
+                                    allArea.stream().forEach(area -> {
+                                        if (_hotel.getAreaId().equals(area.getId().substring(6))) {
+                                            areas.add(area.getName());
+                                        }
+                                    });
+
+                                    if (!areas.isEmpty()) {
+                                        hotel.setAreas(areas);
+                                    } else {
+                                        writeToFileApacheCommonIO("not found area_id: " + _hotel.getAreaId().toString() + ", hotel_id: " + _hotel.getId() + ", city_id: " + _hotel.getCityId(), hotelMetaDataProblemFile);
+                                        System.out.println("not found area_id: " + _hotel.getAreaId().toString() + ", hotel_id: " + _hotel.getId() + ", city_id: " + _hotel.getCityId());
+                                    }
+                                } else {
+                                    writeToFileApacheCommonIO("not found area_id: " + _hotel.getAreaId().toString() + ", hotel_id: " + _hotel.getId() + ", city_id: " + _hotel.getCityId(), hotelMetaDataProblemFile);
+                                    System.out.println("can't get area list of city_id: " + _hotel.getCityId());
+                                }
+                                //</editor-fold>
+                            }
+
+                            if (!StringUtils.isEmpty(_hotel.getImages()) && (!_hotel.getImages().isEmpty())) {
+                                //<editor-fold desc="add images">
+                                List<Image> imageList = new ArrayList<>();
+                                _hotel.getImages().forEach(_image -> {
+                                    Image image = new Image();
+                                    Boolean isDataProblem = false;
+                                    //<editor-fold desc="validatation data and copy to new object">
+                                    if (!StringUtils.isEmpty(_image.getIsPrimary().toString())) {
+                                        image.setIsPrimary(Boolean.parseBoolean(_image.getIsPrimary().toString()));
+                                    } else {
+                                        // data problem
+                                        isDataProblem = true;
+                                    }
+                                    if (!StringUtils.isEmpty(_image.getImageUrl())) {
+                                        image.setImageUrl(_image.getImageUrl().toString());
+                                    } else {
+                                        // data problem
+                                        isDataProblem = true;
+                                    }
+                                    if (!StringUtils.isEmpty(_image.getThumbnailUrl())) {
+                                        image.setThumbnailUrl(_image.getThumbnailUrl().toString());
+                                    } else {
+                                        // data problem
+                                        isDataProblem = true;
+                                    }
+                                    //</editor-fold>
+                                    if (!isDataProblem) {
+                                        imageList.add(image);
+                                    } else {
+                                        // write to file or something
+                                    }
+                                    hotel.setImages(imageList);
+                                });
+                                //</editor-fold>
+                            }
 
                             // if hotelMetada already add then skipped
-                            JsonObject jsonHotelResponseData = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + _hotel.getId().replaceAll("\"", "") + "?token=" + loginToken), JsonObject.class);
+                            JsonObject jsonHotelResponseData = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + _hotel.getId() + "?token=" + loginToken), JsonObject.class);
                             if (jsonHotelResponseData.get("status").toString().equals("\"SUCCESS\"")) {
                                 continue;
                             }
 
                             if (Integer.parseInt(_hotel.getId().substring(4)) == hotelMetadataCounter) {
                                 // add hotel meta data with old data
-                                String payload = "{\"type\":\"create_hotel\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\":" + newHoteljSon + "}}";
+                                String payload = "{\"type\":\"create_hotel\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\":" + new Gson().toJson(hotel) + "}}";
                                 JsonObject jsonAddHotelResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels?token=" + loginToken, payload), JsonObject.class);
                                 System.out.println("i: " + hotelMetadataCounter + ", id: " + jsonAddHotelResponse.get("id").toString() + ", add_hotel status: " + jsonAddHotelResponse.get("status").toString());
-                                //System.out.println(i);
-
                                 // add delay for couchbase
                                 sleep(300);
                             } else {
@@ -160,18 +206,14 @@ public class Application {
                                 String payload = "{\"type\":\"create_hotel\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\":{\"hotel_name\":\"dummy\"}}}";
                                 JsonObject jsonAddHotelResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels?token=" + loginToken, payload), JsonObject.class);
                                 System.out.println("i: " + hotelMetadataCounter + ", id: " + jsonAddHotelResponse.get("id").toString() + ", add_hotel_dummy status: " + jsonAddHotelResponse.get("status").toString());
-                                //System.out.println("dummy: " + i);
-
                                 // add delay for couchbase
-                                sleep(50);
+                                sleep(300);
 
                                 // real information
                                 hotelMetadataCounter++;
-                                payload = "{\"type\":\"create_hotel\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\":" + newHoteljSon + "}}";
+                                payload = "{\"type\":\"create_hotel\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\":" + new Gson().toJson(hotel) + "}}";
                                 jsonAddHotelResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels?token=" + loginToken, payload), JsonObject.class);
                                 System.out.println("i: " + hotelMetadataCounter + ", id: " + jsonAddHotelResponse.get("id").toString() + ", add_hotel status: " + jsonAddHotelResponse.get("status").toString());
-                                //System.out.println(i);
-
                                 // add delay for couchbase
                                 sleep(300);
 
@@ -184,7 +226,7 @@ public class Application {
                             hotelMetadataFailedCounter++;
                         }
                         //</editor-fold>
-                    } else if (hotelBaseRateDataPattern.matcher(readLine).find()) {
+                    } else if (hotelBaseRateDataPattern.matcher(readLine).find() && false) {
                         //<editor-fold desc="RESP API hotel_base_rate">
                         // TODO :: display_markup from v.2 still need to add to ms-agents in v.3
                         // check pattern of room_rate that already specify room_rate data not empty_list
@@ -291,23 +333,13 @@ public class Application {
                         // TODO :: SEQUESNCE-2 :: load for backend_hotel
                         //<editor-fold desc="fix dirty data">
                         // extract field of value (which is field 4 of export.csv file
-                        String[] tokens = readLine.split("^[a-z:_-]+[0-9]+,[0-9]+,[0-9]+,[0-9]+,\"|\",[0-9]+,[0-9]+,[0-9]+$");
-                        String jsonString = tokens[1].replace("\"\"", "\"");
+                        String[] tokens = readLine.split("^[\\w,-:]+\"|\"[,\\d]+$");
+                        String jsonString = tokens[1].replaceAll("\"\"", "%@").replaceAll("%@", "\"");
 
                         // fixed type remarks transform
-                        jsonString = jsonString.replace("\"remarks\":\"\"", "\"remarks\":null");
-                        jsonString = jsonString.replace("\"remarks\":[]", "\"remarks\":null");
                         jsonString = jsonString.replaceAll("\"remarks\":\"(.+)\",\"room_count", "\"remarks\":[{\"^o\": \"Sunseries::Domain::Model::Hotel::Remark\", \"description\": \"$1\", \"id\":\"\"}],\"room_count");
-                        // fixed type stars transform
-                        jsonString = jsonString.trim();
-                        jsonString = jsonString.replace("\"stars\":([0-9])", "\"stars\":\"$1\"");
-                        // fixed any [] empty list;
-                        jsonString = jsonString.replaceAll(":\\[]", ":null");
-                        // fixed any error missing " ":","
-                        jsonString = jsonString.replaceAll("\":\",", "\":\"\",");
                         //</editor-fold>
 
-                        System.out.println(jsonString);
                         _BackEndHotelMetadata _backendHotel = new Gson().fromJson(jsonString, _BackEndHotelMetadata.class);
                         if (_backendHotel != null) {
                             backendHotelMetadataCounter++;
@@ -317,115 +349,6 @@ public class Application {
                             if (jsonGetHotelResponse.get("status").toString().equals("\"SUCCESS\"")) {
                                 // start to copy each data from backend_hotel to hotel
                                 Hotel hotel = new Gson().fromJson(jsonGetHotelResponse.get("hotel"), Hotel.class);
-
-                                if (!StringUtils.isEmpty(_backendHotel.getImages()) && (_backendHotel.getImages().size() != 0)) {
-                                    //<editor-fold desc="REST API 3rd-hotel_meta_data for images">
-                                    if (_backendHotel.getImages().get(0).getImageUrl().getClass().equals(String.class) && StringUtils.isEmpty(hotel.getImages())) {
-                                        List<Image> imageList = new ArrayList<>();
-                                        _backendHotel.getImages().forEach(_image -> {
-                                            Image image = new Image();
-                                            Boolean isDataProblem = false;
-                                            //<editor-fold desc="validatation data and copy to new object">
-                                            if (!StringUtils.isEmpty(_image.getIsPrimary().toString())) {
-                                                image.setIsPrimary(Boolean.parseBoolean(_image.getIsPrimary().toString()));
-                                            } else {
-                                                // data problem
-                                                isDataProblem = true;
-                                            }
-                                            if (!StringUtils.isEmpty(_image.getImageUrl())) {
-                                                image.setImageUrl(_image.getImageUrl().toString());
-                                            } else {
-                                                // data problem
-                                                isDataProblem = true;
-                                            }
-                                            if (!StringUtils.isEmpty(_image.getThumbnailUrl())) {
-                                                image.setThumbnailUrl(_image.getThumbnailUrl().toString());
-                                            } else {
-                                                // data problem
-                                                isDataProblem = true;
-                                            }
-                                            //</editor-fold>
-                                            if (!isDataProblem) {
-                                                imageList.add(image);
-                                            } else {
-                                                // write to file or something
-                                            }
-                                        });
-
-                                        // update hotel data with old data
-                                        String payload = "{\"type\":\"update_hotel\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\": { \"hotel_id\":\"" + hotel.getHotelId() + "\", \"images\":" + new Gson().toJson(imageList) + "}}}";
-                                        jsonUpdateHotelResponse = new Gson().fromJson(doHttpPatchClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId().replaceAll("\"", "") + "?token=" + loginToken, payload), JsonObject.class);
-                                        System.out.println("i: " + backendHotelMetadataCounter + ", id: " + jsonUpdateHotelResponse.get("id").toString() + ", hotel_update_backend :: add images status: " + jsonUpdateHotelResponse.get("status").toString());
-                                        sleep(50);
-                                    } else if (_backendHotel.getImages().get(0).getImageUrl().getClass().equals(LinkedTreeMap.class) && StringUtils.isEmpty(hotel.getImages())) {
-                                        List<Image> imageList = new ArrayList<>();
-                                        _backendHotel.getImages().forEach(_image -> {
-                                            Image image = new Image();
-                                            Boolean isDataProblem = false;
-                                            //<editor-fold desc="validatation data and copy to new object">
-                                            if (!StringUtils.isEmpty(_image.getIsPrimary().toString())) {
-                                                image.setIsPrimary(Boolean.parseBoolean(_image.getIsPrimary().toString()));
-                                            } else {
-                                                // data problem
-                                                isDataProblem = true;
-                                            }
-                                            if (!StringUtils.isEmpty(_image.getImageUrl())) {
-                                                UrlAmazon _url = new Gson().fromJson(new Gson().toJson(_image.getImageUrl()), UrlAmazon.class);
-                                                image.setImageUrl(_url.toString());
-                                            } else {
-                                                // data problem
-                                                isDataProblem = true;
-                                            }
-                                            if (!StringUtils.isEmpty(_image.getThumbnailUrl())) {
-                                                UrlAmazon _url = new Gson().fromJson(new Gson().toJson(_image.getThumbnailUrl()), UrlAmazon.class);
-                                                image.setThumbnailUrl(_url.toString());
-                                            } else {
-                                                // data problem
-                                                isDataProblem = true;
-                                            }
-                                            //</editor-fold>
-                                            if (!isDataProblem) {
-                                                imageList.add(image);
-                                            } else {
-                                                // write to file or something
-                                            }
-                                        });
-
-                                        // update hotel data with old data
-                                        String payload = "{\"type\":\"update_hotel\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\": { \"hotel_id\":\"" + hotel.getHotelId() + "\", \"images\":" + new Gson().toJson(imageList) + "}}}";
-                                        jsonUpdateHotelResponse = new Gson().fromJson(doHttpPatchClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId().replaceAll("\"", "") + "?token=" + loginToken, payload), JsonObject.class);
-                                        System.out.println("i: " + backendHotelMetadataCounter + ", id: " + jsonUpdateHotelResponse.get("id").toString() + ", hotel_update_backend :: add images status: " + jsonUpdateHotelResponse.get("status").toString());
-                                        sleep(50);
-                                    }
-                                    //</editor-fold>
-                                }
-
-                                if (!StringUtils.isEmpty(_backendHotel.getAreaId())) {
-                                    //<editor-fold desc="REST API 3rd-hotel_meta_data for area_id">
-                                    JsonObject jsonGetAreaNameResponse = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":8089/sunseries/v1/cities/" + hotel.getCity() + "/areas?token=" + loginToken2), JsonObject.class);
-                                    if (!StringUtils.isEmpty(jsonGetAreaNameResponse)) {
-                                        List<_Area> allArea = new Gson().fromJson(jsonGetAreaNameResponse.get("areas"), new TypeToken<List<_Area>>(){}.getType());
-                                        List<String> areas = new ArrayList<>();
-                                        allArea.stream().forEach(area -> {
-                                            if (_backendHotel.getAreaId().equals(area.getId().substring(6))) {
-                                                areas.add(area.getName());
-                                            }
-                                        });
-
-                                        if (areas.size() != 0) {
-                                            String payload = "{\"type\":\"update_hotel\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\": { \"hotel_id\": \"" + hotel.getHotelId() + "\", \"areas\": " + new Gson().toJson(areas) + "}}}";
-                                            jsonUpdateHotelResponse = new Gson().fromJson(doHttpPatchClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId().replaceAll("\"", "") + "?token=" + loginToken, payload), JsonObject.class);
-                                            System.out.println("i: " + backendHotelMetadataCounter + ", id: " + jsonUpdateHotelResponse.get("id").toString() + ", hotel_update_backend_area_added status: " + jsonUpdateHotelResponse.get("status").toString());
-                                            sleep(50);
-                                        } else {
-                                            System.out.println("not found area_id: " + _backendHotel.getAreaId().toString());
-                                        }
-                                    } else {
-                                        System.out.println("can't get area list");
-                                    }
-                                    //</editor-fold>
-                                }
-
 
                                 if (hotel.getRoomClasses() == null || hotel.getRoomClasses().size() == 0) {
 
@@ -455,102 +378,105 @@ public class Application {
                                         hotel.setRemark(remarkList);
                                     }
 
-                                    String newHoteljSon = new Gson().toJson(hotel);
                                     // update hotel data with old data
-                                    String payload = "{\"type\":\"update_hotel\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\":" + newHoteljSon + "}}";
+                                    String payload = "{\"type\":\"update_hotel\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\":" + new Gson().toJson(hotel) + "}}";
                                     jsonUpdateHotelResponse = new Gson().fromJson(doHttpPatchClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId().replaceAll("\"", "") + "?token=" + loginToken, payload), JsonObject.class);
                                     System.out.println("i: " + backendHotelMetadataCounter + ", id: " + jsonUpdateHotelResponse.get("id").toString() + ", hotel_update_backend status: " + jsonUpdateHotelResponse.get("status").toString());
-                                    sleep(100);
+                                    sleep(50);
                                     //</editor-fold>
 
                                     //<editor-fold desc="Rest API to add room_class">
-                                    if (_backendHotel.getRoomClasses() != null) {
-                                        List<RoomClass> roomClassList = new ArrayList<>();
-                                        Integer _rcm_counter = 0;
-                                        for (Map<String, Object> _roomClasses : _backendHotel.getRoomClasses()) {
-                                            _rcm_counter++;
-                                            RoomClass roomClass = new RoomClass();
-                                            if (_roomClasses.get("id").equals("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter))) {
-                                                // in case that never load data of room classes to new version
+                                    if ((!StringUtils.isEmpty(_backendHotel.getRoomClasses()) && (!_backendHotel.getRoomClasses().isEmpty()))) {
+                                        if (hotel.getRoomClasses().isEmpty()) {
+                                            List<RoomClass> roomClassList = new ArrayList<>();
+                                            Integer _rcm_counter = 0;
+                                            for (Map<String, Object> _roomClasses : _backendHotel.getRoomClasses()) {
+                                                _rcm_counter++;
+                                                RoomClass roomClass = new RoomClass();
+                                                if (_roomClasses.get("id").equals("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter))) {
+                                                    // in case that never load data of room classes to new version
 
-                                                roomClass.setRoomClassName(_roomClasses.get("name").toString());
-                                                // TODO : in case that room_classes not specify MaxOcc --> jack will help to fill in again.
-                                                if (_roomClasses.get("max_occupancy_without_extra_bed") == null ||
-                                                        _roomClasses.get("max_occupancy_with_extra_bed") == null ||
-                                                        _roomClasses.get("max_adults_with_extra_bed") == null) {
-                                                    roomClass.setMaxOccupancyExcludeExtraBed("0");
-                                                    roomClass.setMaxOccupancyIncludeExtraBed("0");
-                                                    roomClass.setMaxAdultIncludeExtraBed("0");
-                                                    roomClass.setMixAdultAndChildInRoom(false);
-                                                    roomClass.setMaxChild("0");
-                                                    roomClass.setOrder(0);
-                                                    writeToFileApacheCommonIO("no_max_occ:" + _roomClasses.get("id").toString() + System.lineSeparator(), roomClassBedTypeProblemFile);
-                                                    hotelWhichNotSpecifyBedTypeOrMaxOccu.add(_roomClasses.get("id").toString());
-                                                } else {
-                                                    roomClass.setMaxOccupancyExcludeExtraBed(convertObjectToInt(_roomClasses.get("max_occupancy_without_extra_bed")).toString());
-                                                    roomClass.setMaxOccupancyIncludeExtraBed(convertObjectToInt(_roomClasses.get("max_occupancy_with_extra_bed")).toString());
-                                                    roomClass.setMaxAdultIncludeExtraBed(convertObjectToInt(_roomClasses.get("max_adults_with_extra_bed")).toString());
-                                                    if (_roomClasses.get("mix_adults_children_extra_bed") != null) {
-                                                        roomClass.setMixAdultAndChildInRoom(Boolean.parseBoolean(_roomClasses.get("mix_adults_children_extra_bed").toString()));
-                                                    } else {
+                                                    roomClass.setRoomClassName(_roomClasses.get("name").toString());
+                                                    // TODO : in case that room_classes not specify MaxOcc --> jack will help to fill in again.
+                                                    if (_roomClasses.get("max_occupancy_without_extra_bed") == null ||
+                                                            _roomClasses.get("max_occupancy_with_extra_bed") == null ||
+                                                            _roomClasses.get("max_adults_with_extra_bed") == null) {
+                                                        roomClass.setMaxOccupancyExcludeExtraBed("0");
+                                                        roomClass.setMaxOccupancyIncludeExtraBed("0");
+                                                        roomClass.setMaxAdultIncludeExtraBed("0");
                                                         roomClass.setMixAdultAndChildInRoom(false);
-                                                    }
-                                                    //<editor-fold desc="Set max child for each room_class - must already have room_class">
-                                                    // set child policy for each room class
-                                                    if (_backendHotel.getChildPolicy() != null) {
-                                                        if (_backendHotel.getChildPolicy().get("maximum_children") != null) {
-                                                            Map<String, Object> _max_child = new Gson().fromJson(new Gson().toJson(_backendHotel.getChildPolicy().get("maximum_children")), Map.class);
-                                                            if (_max_child.get("self") != null) {
-                                                                Map<String, Object> _self = new Gson().fromJson(new Gson().toJson(_max_child.get("self")), Map.class);
-                                                                if (!StringUtils.isEmpty(_self.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter)))) {
-                                                                    roomClass.setMaxChild(convertObjectToInt(_self.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter))).toString());
+                                                        roomClass.setMaxChild("0");
+                                                        roomClass.setOrder(0);
+                                                        writeToFileApacheCommonIO("no_max_occ:" + _roomClasses.get("id").toString() + System.lineSeparator(), roomClassBedTypeProblemFile);
+                                                        System.out.println("no_max_occ:" + _roomClasses.get("id").toString() + System.lineSeparator());
+                                                    } else {
+                                                        roomClass.setMaxOccupancyExcludeExtraBed(convertObjectToInt(_roomClasses.get("max_occupancy_without_extra_bed")).toString());
+                                                        roomClass.setMaxOccupancyIncludeExtraBed(convertObjectToInt(_roomClasses.get("max_occupancy_with_extra_bed")).toString());
+                                                        roomClass.setMaxAdultIncludeExtraBed(convertObjectToInt(_roomClasses.get("max_adults_with_extra_bed")).toString());
+                                                        if (_roomClasses.get("mix_adults_children_extra_bed") != null) {
+                                                            roomClass.setMixAdultAndChildInRoom(Boolean.parseBoolean(_roomClasses.get("mix_adults_children_extra_bed").toString()));
+                                                        } else {
+                                                            roomClass.setMixAdultAndChildInRoom(false);
+                                                        }
+                                                        //<editor-fold desc="Set max child for each room_class - must already have room_class">
+                                                        // set child policy for each room class
+                                                        if (_backendHotel.getChildPolicy() != null) {
+                                                            if (_backendHotel.getChildPolicy().get("maximum_children") != null) {
+                                                                Map<String, Object> _max_child = new Gson().fromJson(new Gson().toJson(_backendHotel.getChildPolicy().get("maximum_children")), Map.class);
+                                                                if (_max_child.get("self") != null) {
+                                                                    Map<String, Object> _self = new Gson().fromJson(new Gson().toJson(_max_child.get("self")), Map.class);
+                                                                    if (!StringUtils.isEmpty(_self.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter)))) {
+                                                                        roomClass.setMaxChild(convertObjectToInt(_self.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter))).toString());
+                                                                    } else {
+                                                                        // jack confirm that if have 0-set or not-set means 0 --> not allow children in that room_class --> martin confirm to put 99 and track the hotel in list, then let other fixed
+                                                                        roomClass.setMaxChild("99");
+                                                                        writeToFileApacheCommonIO("Must fix data :: " + hotel.getHotelId() + " not specify MaxChild of room_class" + System.lineSeparator(), childPolicyProblemFile);
+                                                                    }
                                                                 } else {
-                                                                    // jack confirm that if have 0-set or not-set means 0 --> not allow children in that room_class --> martin confirm to put 99 and track the hotel in list, then let other fixed
-                                                                    roomClass.setMaxChild("99");
-                                                                    writeToFileApacheCommonIO("Must fix data :: " + hotel.getHotelId() + " not specify MaxChild of room_class", childPolicyProblemFile);
+                                                                    if (!StringUtils.isEmpty(_max_child.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter)))) {
+                                                                        roomClass.setMaxChild(convertObjectToInt(_max_child.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter))).toString());
+                                                                    } else {
+                                                                        // jack confirm that if have 0-set or not-set means 0 --> not allow children in that room_class --> martin confirm to put 99 and track the hotel in list, then let other fixed
+                                                                        roomClass.setMaxChild("99");
+                                                                        writeToFileApacheCommonIO("Must fix data :: " + hotel.getHotelId() + " not specify MaxChild of room_class" + System.lineSeparator(), childPolicyProblemFile);
+                                                                    }
                                                                 }
                                                             } else {
-                                                                if (!StringUtils.isEmpty(_max_child.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter)))) {
-                                                                    roomClass.setMaxChild(convertObjectToInt(_max_child.get("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter))).toString());
-                                                                } else {
-                                                                    // jack confirm that if have 0-set or not-set means 0 --> not allow children in that room_class --> martin confirm to put 99 and track the hotel in list, then let other fixed
-                                                                    roomClass.setMaxChild("99");
-                                                                    writeToFileApacheCommonIO("Must fix data :: " + hotel.getHotelId() + " not specify MaxChild of room_class", childPolicyProblemFile);
-                                                                }
+                                                                writeToFileApacheCommonIO("Must fix data :: " + hotel.getHotelId() + " not specify MaxChild of room_class" + System.lineSeparator(), childPolicyProblemFile);
                                                             }
                                                         } else {
-                                                            writeToFileApacheCommonIO("Must fix data :: " + hotel.getHotelId() + " not specify MaxChild of room_class", childPolicyProblemFile);
+                                                            // if v.2 not specify any child_policy no need to do anything for v.3
                                                         }
-                                                    } else {
-                                                        // if v.2 not specify any child_policy no need to do anything for v.3
+                                                        //</editor-fold>
+                                                        roomClass.setOrder(0);
                                                     }
+                                                    //<editor-fold desc="Set BedType for each room_class - mush already have room_class">
+                                                    // TODO : some hotel not specify bedtype or maxOccu-- list in log.
+                                                    List<BedType> bedTypeList = new ArrayList<>();
+                                                    if (_roomClasses.get("room_configurations") != null) {
+                                                        ((List<Map<String, Object>>) _roomClasses.get("room_configurations")).forEach(_roomConfiguration -> {
+                                                            bedTypeList.add(new BedType(_roomConfiguration.get("name").toString(), (boolean) _roomConfiguration.get("extra_bed")));
+                                                        });
+                                                    } else {
+                                                        // set default bedType first
+                                                        bedTypeList.add(new BedType("single", false));
+                                                        writeToFileApacheCommonIO("no_bed_type:" + _roomClasses.get("id").toString() + System.lineSeparator(), roomClassBedTypeProblemFile);
+                                                    }
+                                                    roomClass.setBedTypes(bedTypeList);
                                                     //</editor-fold>
-                                                    roomClass.setOrder(0);
-                                                }
-                                                //<editor-fold desc="Set BedType for each room_class - mush already have room_class">
-                                                // TODO : some hotel not specify bedtype or maxOccu-- list in log.
-                                                List<BedType> bedTypeList = new ArrayList<>();
-                                                if (_roomClasses.get("room_configurations") != null) {
-                                                    ((List<Map<String, Object>>) _roomClasses.get("room_configurations")).forEach(_roomConfiguration -> {
-                                                        bedTypeList.add(new BedType(_roomConfiguration.get("name").toString(), (boolean) _roomConfiguration.get("extra_bed")));
-                                                    });
                                                 } else {
-                                                    // set default bedType first
-                                                    bedTypeList.add(new BedType("single", false));
-                                                    writeToFileApacheCommonIO("no_bed_type:" + _roomClasses.get("id").toString() + System.lineSeparator(), roomClassBedTypeProblemFile);
+                                                    // add dummy roomClass
+                                                    roomClass.setRoomClassName("dummy");
                                                 }
-                                                roomClass.setBedTypes(bedTypeList);
-                                                //</editor-fold>
-                                            } else {
-                                                // add dummy roomClass
-                                                roomClass.setRoomClassName("dummy");
+                                                roomClassList.add(roomClass);
                                             }
-                                            roomClassList.add(roomClass);
+                                            payload = "{\"type\":\"create_room_class\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\": {\"room_classes\":" + new Gson().toJson(roomClassList) + "}}}";
+                                            JsonObject jsonCreateRoomClassesResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/room-classes" + "?token=" + loginToken, payload), JsonObject.class);
+                                            System.out.println("i: " + backendHotelMetadataCounter + ", id: " + hotel.getHotelId().toString() + ", create_room_classe status: " + jsonCreateRoomClassesResponse.get("status").toString());
+                                            sleep(300);
+                                        } else {
+                                            // already add room_classes
                                         }
-                                        payload = "{\"type\":\"create_room_class\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\": {\"room_classes\":" + new Gson().toJson(roomClassList) + "}}}";
-                                        JsonObject jsonCreateRoomClassesResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/room-classes" + "?token=" + loginToken, payload), JsonObject.class);
-                                        System.out.println("i: " + backendHotelMetadataCounter + ", id: " + hotel.getHotelId().toString() + ", create_room_classe status: " + jsonCreateRoomClassesResponse.get("status").toString());
-                                        sleep(300);
                                     } else {
                                         // old data not specify room_classes
                                     }
@@ -843,158 +769,162 @@ public class Application {
                 }
                 //</editor-fold>
 
-                if (promotionDataPattern.matcher(readLine).find()) {
-                    // extract field of value (which is field 4 of export.csv file)
-                    //<editor-fold desc="fixed format for promotion_container">
-                    String[] tokens = readLine.split("^[\\w:\\d,-]+\"|\"[,\\d]+$");
-                    String jsonString = tokens[1].replaceAll("\"\"", "%@").replaceAll("%@","\"");
-                    //</editor-fold>
+                if (1==0) {
+                    //<editor-fold desc="RestAPI to load promotion_container">
+                    if (promotionDataPattern.matcher(readLine).find()) {
+                        // extract field of value (which is field 4 of export.csv file)
+                        //<editor-fold desc="fixed format for promotion_container">
+                        String[] tokens = readLine.split("^[\\w:\\d,-]+\"|\"[,\\d]+$");
+                        String jsonString = tokens[1].replaceAll("\"\"", "%@").replaceAll("%@", "\"");
+                        //</editor-fold>
 
-                    //System.out.println(jsonString);
+                        //System.out.println(jsonString);
 
-                    _PromotionContainer _promotionContainer = new Gson().fromJson(jsonString, _PromotionContainer.class);
-                    PromotionContainer promotionContainer = new PromotionContainer();
-                    List<Promotion> promotionList = new ArrayList<>();
-                    Boolean isDataProblem = false;
-                    //<editor-fold desc="promotion_containers transform">
-                    if (!StringUtils.isEmpty(_promotionContainer)) {
-                        promotionContainer.setCode(_promotionContainer.getId());
-                    } else {
-                        isDataProblem = true;
-                    }
-                    promotionContainer.setAllotmentsPromotionalEnabled(false);
-                    if (!StringUtils.isEmpty(_promotionContainer.getDescription())) {
-                        promotionContainer.setDescription(_promotionContainer.getDescription());
-                    } else {
-                        //isDataProblem = true;
-                    }
-                    if (!StringUtils.isEmpty(_promotionContainer.getName())) {
-                        promotionContainer.setName(_promotionContainer.getName());
-                    } else {
-                        isDataProblem = true;
-                    }
-                    if (!StringUtils.isEmpty(_promotionContainer.getTags())) {
-                        promotionContainer.setPromotionTag(_promotionContainer.getTags());
-                    } else {
-                        //isDataProblem = true;
-                    }
-                    //</editor-fold>
+                        _PromotionContainer _promotionContainer = new Gson().fromJson(jsonString, _PromotionContainer.class);
+                        PromotionContainer promotionContainer = new PromotionContainer();
+                        List<Promotion> promotionList = new ArrayList<>();
+                        Boolean isDataProblem = false;
+                        //<editor-fold desc="promotion_containers transform">
+                        if (!StringUtils.isEmpty(_promotionContainer)) {
+                            promotionContainer.setCode(_promotionContainer.getId());
+                        } else {
+                            isDataProblem = true;
+                        }
+                        promotionContainer.setAllotmentsPromotionalEnabled(false);
+                        if (!StringUtils.isEmpty(_promotionContainer.getDescription())) {
+                            promotionContainer.setDescription(_promotionContainer.getDescription());
+                        } else {
+                            //isDataProblem = true;
+                        }
+                        if (!StringUtils.isEmpty(_promotionContainer.getName())) {
+                            promotionContainer.setName(_promotionContainer.getName());
+                        } else {
+                            isDataProblem = true;
+                        }
+                        if (!StringUtils.isEmpty(_promotionContainer.getTags())) {
+                            promotionContainer.setPromotionTag(_promotionContainer.getTags());
+                        } else {
+                            //isDataProblem = true;
+                        }
+                        //</editor-fold>
 
-                    //<editor-fold desc="RESP API for create promotion_container">
+                        //<editor-fold desc="RESP API for create promotion_container">
                     /*String payload = "{\"type\":\"update_hotel\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\": { \"hotel_id\":\"" + hotel.getHotelId() + "\", \"images\":" + new Gson().toJson(imageList) + "}}}";
                     jsonUpdateHotelResponse = new Gson().fromJson(doHttpPatchClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId().replaceAll("\"", "") + "?token=" + loginToken, payload), JsonObject.class);
                     System.out.println("i: " + backendHotelMetadataCounter + ", id: " + jsonUpdateHotelResponse.get("id").toString() + ", hotel_update_backend :: add images status: " + jsonUpdateHotelResponse.get("status").toString());
                     sleep(50);*/
-                    //</editor-fold>
-                    String payload = "{\"type\":\"get_all_room_class\",\"origin\":\"ms-load-data\"}";
-                    JsonObject jsonGetRoomClasses = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + _promotionContainer.getHotelServiceId().substring(_promotionContainer.getHotelServiceId().indexOf("suns")) +"/room-classes?token=" + loginToken), JsonObject.class);
-                    if (!_promotionContainer.getPromotions().isEmpty()) {
-                        _promotionContainer.getPromotions().stream().forEach(_promotion -> {
-                            switch (_promotion.getO().toString()) {
-                                case "Sunseries::Domain::Model::FreeProductPromotion":
-                                    System.out.println(jsonString);
-                                    FreeProductPromotion freeProductPromotion = new FreeProductPromotion();
-                                    freeProductPromotion.setType("free_product");
-                                    if (!StringUtils.isEmpty(_promotion.getId())) {
-                                        freeProductPromotion.setId(_promotion.getId());
-                                    } else {
-                                        // data have problem
-                                    }
-                                    if (!StringUtils.isEmpty(_promotion.getBlackoutPeriod()) && !_promotion.getBlackoutPeriod().isEmpty()) {
-                                        freeProductPromotion.setBlackoutPeriods(new ArrayList<>());
-                                        _promotion.getBlackoutPeriod().stream().forEach(_period -> {
-                                            BlackoutPeriod blackoutPeriod = new BlackoutPeriod();
-                                            blackoutPeriod.setRoomClass(new ArrayList<>());
-                                            blackoutPeriod.setBlackoutFrom(transformOldDateToString(_period.getPeriod().getFrom()));
-                                            blackoutPeriod.setBlackoutTo(transformOldDateToString(_period.getPeriod().getTo()));
-                                            if (_period.getRoomClassIds() == null) {
-                                                if (jsonGetRoomClasses.get("status").toString().replaceAll("\"","").equals("SUCCESS") && jsonGetRoomClasses.get("room_classes").isJsonArray()) {
-                                                    List<Map<String, String>> roomClassList = new Gson().fromJson(new Gson().toJson(jsonGetRoomClasses.get("room_classes")), List.class);
-                                                    roomClassList.forEach(roomClass -> blackoutPeriod.getRoomClass().add(roomClass.get("room_class_id").toString()));
-                                                } else {
-                                                    System.out.println("data is problem");
-                                                }
-                                            } else {
-                                                _period.getRoomClassIds().stream().forEach(_roomClass -> {
-                                                    blackoutPeriod.getRoomClass().add(_roomClass.substring(_roomClass.indexOf("suns")));
-                                                });
-                                            }
-                                            freeProductPromotion.getBlackoutPeriods().add(blackoutPeriod);
-                                        });
-                                    } else {
-                                        // normal
-                                    }
-                                    if (!StringUtils.isEmpty(_promotion.getActions()) && (!_promotion.getActions().isEmpty())) {
-                                        System.out.println("something to do");
-                                    }
-                                    if (!StringUtils.isEmpty(_promotion.getChecks()) && (!_promotion.getChecks().isEmpty())) {
-                                        System.out.println("something to do");
-                                    }
-                                    if (!StringUtils.isEmpty(_promotion.getPromotionCharge())) {
-                                        System.out.println("something to do");
-                                    }
-                                    if (!StringUtils.isEmpty(_promotion.getSpec())) {
-                                        _Spec _spec = new Gson().fromJson(new Gson().toJson(_promotion.getSpec()), _Spec.class);
-                                        freeProductPromotion.setCode(_spec.getCode());
-                                        freeProductPromotion.setApplicableFrom(transformOldDateToString(_spec.getApplicablePeriod().getFrom()));
-                                        freeProductPromotion.setApplicableTo(transformOldDateToString(_spec.getApplicablePeriod().getTo()));
-                                        freeProductPromotion.setApplicableDaysOfWeek(_spec.getApplicableDays());
-                                        // Todo:: check _spec.getEarlyBird() boolean
-                                        freeProductPromotion.setMarket(_spec.getMarket());
-                                        freeProductPromotion.setMaximumAppliedNights(convertObjectToInt(_spec.getMaximumAppliedNights()));
-                                        freeProductPromotion.setMaximumNightStay(convertObjectToInt(_spec.getMaximumNightStay()));
-                                        freeProductPromotion.setMinimumNightStay(convertObjectToInt(_spec.getMinimumNightStay()));
-                                        freeProductPromotion.setMinimumNightStayInsidePromotion(convertObjectToInt(_spec.getMinimumNightStayInsidePromotion()));
-                                        freeProductPromotion.setMinimumRooms(convertObjectToInt(_spec.getMinimumRooms()));
-                                        freeProductPromotion.setForceCombine(_spec.getForcedCombinable());
-                                        freeProductPromotion.setExclusiveCombine(_spec.getExclusive());
-                                        freeProductPromotion.setInflexible(_spec.getInflexible());
-                                        _spec.getRoomClasses().stream().forEach(_roomClass -> {
-                                            if (freeProductPromotion.getApplicableRoomClass() == null) {
-                                                freeProductPromotion.setApplicableRoomClass(new ArrayList<>());
-                                            }
-                                            freeProductPromotion.getApplicableRoomClass().add(_roomClass.substring(_roomClass.indexOf("suns")));
-                                        });
-                                        freeProductPromotion.setBookByDate(transformOldDateToString(_spec.getBookByDate()));
-                                        freeProductPromotion.setApplicableDaysOfWeek(_spec.getApplicableDays());
-                                        if (!StringUtils.isEmpty(_spec.getArgs().getO()) && (_spec.getArgs().getO().equals("ActiveSupport::HashWithIndifferentAccess"))) {
-                                            freeProductPromotion.setCurrencyCode(_spec.getArgs().getSelf().get("charge_currency_code").toString().replaceAll("\"",""));
-
-                                            if (freeProductPromotion.getFreeProductSpecifications() == null) {
-                                                freeProductPromotion.setFreeProductSpecifications(new ArrayList<>());
-                                            }
-                                            ((List<String>)_spec.getArgs().getSelf().get("products")).stream().forEach(_product -> freeProductPromotion.getFreeProductSpecifications().add(_product.toString().replaceAll("\"","")));
+                        //</editor-fold>
+                        String payload = "{\"type\":\"get_all_room_class\",\"origin\":\"ms-load-data\"}";
+                        JsonObject jsonGetRoomClasses = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + _promotionContainer.getHotelServiceId().substring(_promotionContainer.getHotelServiceId().indexOf("suns")) + "/room-classes?token=" + loginToken), JsonObject.class);
+                        if (!_promotionContainer.getPromotions().isEmpty()) {
+                            _promotionContainer.getPromotions().stream().forEach(_promotion -> {
+                                switch (_promotion.getO().toString()) {
+                                    case "Sunseries::Domain::Model::FreeProductPromotion":
+                                        System.out.println(jsonString);
+                                        FreeProductPromotion freeProductPromotion = new FreeProductPromotion();
+                                        freeProductPromotion.setType("free_product");
+                                        if (!StringUtils.isEmpty(_promotion.getId())) {
+                                            freeProductPromotion.setId(_promotion.getId());
                                         } else {
-                                            JsonElement jsonElement = new Gson().fromJson(new Gson().toJson(_promotion.getSpec()), JsonElement.class);
+                                            // data have problem
+                                        }
+                                        if (!StringUtils.isEmpty(_promotion.getBlackoutPeriod()) && !_promotion.getBlackoutPeriod().isEmpty()) {
+                                            freeProductPromotion.setBlackoutPeriods(new ArrayList<>());
+                                            _promotion.getBlackoutPeriod().stream().forEach(_period -> {
+                                                BlackoutPeriod blackoutPeriod = new BlackoutPeriod();
+                                                blackoutPeriod.setRoomClass(new ArrayList<>());
+                                                blackoutPeriod.setBlackoutFrom(transformOldDateToString(_period.getPeriod().getFrom()));
+                                                blackoutPeriod.setBlackoutTo(transformOldDateToString(_period.getPeriod().getTo()));
+                                                if (_period.getRoomClassIds() == null) {
+                                                    if (jsonGetRoomClasses.get("status").toString().replaceAll("\"", "").equals("SUCCESS") && jsonGetRoomClasses.get("room_classes").isJsonArray()) {
+                                                        List<Map<String, String>> roomClassList = new Gson().fromJson(new Gson().toJson(jsonGetRoomClasses.get("room_classes")), List.class);
+                                                        roomClassList.forEach(roomClass -> blackoutPeriod.getRoomClass().add(roomClass.get("room_class_id").toString()));
+                                                    } else {
+                                                        System.out.println("data is problem");
+                                                    }
+                                                } else {
+                                                    _period.getRoomClassIds().stream().forEach(_roomClass -> {
+                                                        blackoutPeriod.getRoomClass().add(_roomClass.substring(_roomClass.indexOf("suns")));
+                                                    });
+                                                }
+                                                freeProductPromotion.getBlackoutPeriods().add(blackoutPeriod);
+                                            });
+                                        } else {
+                                            // normal
+                                        }
+                                        if (!StringUtils.isEmpty(_promotion.getActions()) && (!_promotion.getActions().isEmpty())) {
+                                            System.out.println("something to do");
+                                        }
+                                        if (!StringUtils.isEmpty(_promotion.getChecks()) && (!_promotion.getChecks().isEmpty())) {
+                                            System.out.println("something to do");
+                                        }
+                                        if (!StringUtils.isEmpty(_promotion.getPromotionCharge())) {
+                                            System.out.println("something to do");
+                                        }
+                                        if (!StringUtils.isEmpty(_promotion.getSpec())) {
+                                            _Spec _spec = new Gson().fromJson(new Gson().toJson(_promotion.getSpec()), _Spec.class);
+                                            freeProductPromotion.setCode(_spec.getCode());
+                                            freeProductPromotion.setApplicableFrom(transformOldDateToString(_spec.getApplicablePeriod().getFrom()));
+                                            freeProductPromotion.setApplicableTo(transformOldDateToString(_spec.getApplicablePeriod().getTo()));
+                                            freeProductPromotion.setApplicableDaysOfWeek(_spec.getApplicableDays());
+                                            // Todo:: check _spec.getEarlyBird() boolean
+                                            freeProductPromotion.setMarket(_spec.getMarket());
+                                            freeProductPromotion.setMaximumAppliedNights(convertObjectToInt(_spec.getMaximumAppliedNights()));
+                                            freeProductPromotion.setMaximumNightStay(convertObjectToInt(_spec.getMaximumNightStay()));
+                                            freeProductPromotion.setMinimumNightStay(convertObjectToInt(_spec.getMinimumNightStay()));
+                                            freeProductPromotion.setMinimumNightStayInsidePromotion(convertObjectToInt(_spec.getMinimumNightStayInsidePromotion()));
+                                            freeProductPromotion.setMinimumRooms(convertObjectToInt(_spec.getMinimumRooms()));
+                                            freeProductPromotion.setForceCombine(_spec.getForcedCombinable());
+                                            freeProductPromotion.setExclusiveCombine(_spec.getExclusive());
+                                            freeProductPromotion.setInflexible(_spec.getInflexible());
+                                            _spec.getRoomClasses().stream().forEach(_roomClass -> {
+                                                if (freeProductPromotion.getApplicableRoomClass() == null) {
+                                                    freeProductPromotion.setApplicableRoomClass(new ArrayList<>());
+                                                }
+                                                freeProductPromotion.getApplicableRoomClass().add(_roomClass.substring(_roomClass.indexOf("suns")));
+                                            });
+                                            freeProductPromotion.setBookByDate(transformOldDateToString(_spec.getBookByDate()));
+                                            freeProductPromotion.setApplicableDaysOfWeek(_spec.getApplicableDays());
+                                            if (!StringUtils.isEmpty(_spec.getArgs().getO()) && (_spec.getArgs().getO().equals("ActiveSupport::HashWithIndifferentAccess"))) {
+                                                freeProductPromotion.setCurrencyCode(_spec.getArgs().getSelf().get("charge_currency_code").toString().replaceAll("\"", ""));
 
-                                            freeProductPromotion.setCurrencyCode(jsonElement.getAsJsonObject().get("args").getAsJsonObject().get(":charge_currency_code").toString().replaceAll("\"",""));
-                                            jsonElement.getAsJsonObject().get("args").getAsJsonObject().get(":products").getAsJsonArray().forEach(_product -> {
                                                 if (freeProductPromotion.getFreeProductSpecifications() == null) {
                                                     freeProductPromotion.setFreeProductSpecifications(new ArrayList<>());
                                                 }
-                                                freeProductPromotion.getFreeProductSpecifications().add(_product.toString().replace("\"", ""));
-                                            });
-                                        }
-                                    }
-                                    break;
-                                case "Sunseries::Domain::Model::FreeUpgradePromotion":
-                                    break;
-                                case "Sunseries::Domain::Model::FreeNightWithBonusRatePromotion":
-                                    break;
-                                case "Sunseries::Domain::Model::FreeNightPromotion":
-                                    break;
-                                case "Sunseries::Domain::Model::RoomNightsPackagePromotion":
-                                    break;
-                                case "Sunseries::Domain::Model::PercentageDiscountPromotion":
-                                    break;
-                                case "Sunseries::Domain::Model::FlatRatePromotion":
-                                    break;
-                                default :
-                                    break;
-                            }
-                        });
-                    }
+                                                ((List<String>) _spec.getArgs().getSelf().get("products")).stream().forEach(_product -> freeProductPromotion.getFreeProductSpecifications().add(_product.toString().replaceAll("\"", "")));
+                                            } else {
+                                                JsonElement jsonElement = new Gson().fromJson(new Gson().toJson(_promotion.getSpec()), JsonElement.class);
 
+                                                freeProductPromotion.setCurrencyCode(jsonElement.getAsJsonObject().get("args").getAsJsonObject().get(":charge_currency_code").toString().replaceAll("\"", ""));
+                                                jsonElement.getAsJsonObject().get("args").getAsJsonObject().get(":products").getAsJsonArray().forEach(_product -> {
+                                                    if (freeProductPromotion.getFreeProductSpecifications() == null) {
+                                                        freeProductPromotion.setFreeProductSpecifications(new ArrayList<>());
+                                                    }
+                                                    freeProductPromotion.getFreeProductSpecifications().add(_product.toString().replace("\"", ""));
+                                                });
+                                            }
+                                        }
+                                        break;
+                                    case "Sunseries::Domain::Model::FreeUpgradePromotion":
+                                        break;
+                                    case "Sunseries::Domain::Model::FreeNightWithBonusRatePromotion":
+                                        break;
+                                    case "Sunseries::Domain::Model::FreeNightPromotion":
+                                        break;
+                                    case "Sunseries::Domain::Model::RoomNightsPackagePromotion":
+                                        break;
+                                    case "Sunseries::Domain::Model::PercentageDiscountPromotion":
+                                        break;
+                                    case "Sunseries::Domain::Model::FlatRatePromotion":
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            });
+                        }
+
+                    }
+                    //</editor-fold>
                 }
             }
         } catch (Exception ex) {
@@ -1005,7 +935,6 @@ public class Application {
         System.out.print("BackendHotel total: " + backendHotelMetadataCounter);
         System.out.print(", BackendHotel can't map: " + backendHotelMetadataFailedCounter);
         System.out.println(", BackendHotel miss match id: " + backendHotelMetadataMissMatchCounter);
-        System.out.println("Hotel which not specify bedType: " + hotelWhichNotSpecifyBedTypeOrMaxOccu.toString());
     }
 
     private static String transformOldDateToString(Object date) {
@@ -1032,31 +961,34 @@ public class Application {
         Hotel hotel = new Hotel();
         hotel.setHotelName(_hotel.getName());
         List<String> hotelTypeList = new ArrayList<>();
-        if (_hotel.getTypes() != null) {
-            _hotel.getTypes()
-                    .forEach(map -> {
-                        if (map != null) {
-                            Map<String, String> tableMap = (Map<String, String>) map.get("table");
-                            hotelTypeList.add(tableMap.get(":name").toString());
-                        }
-                    });
+        if ((!StringUtils.isEmpty(_hotel.getTypes()) && (!_hotel.getTypes().isEmpty()))) {
+            _hotel.getTypes().forEach(_type -> {
+                if (_type != null) {
+                    Map<String, String> tableMap = (Map<String, String>) _type.get("table");
+                    hotelTypeList.add(tableMap.get(":name").toString());
+                }
+            });
         }
         hotel.setHotelTypes(hotelTypeList);
-        hotel.setDescription(_hotel.getDescription());
+        if (!StringUtils.isEmpty(_hotel.getDescription())) {
+            hotel.setDescription(_hotel.getDescription());
+        }
         hotel.setCity(_hotel.getCityId());
-        // TODO : copy value of area_id from old hotel to new hotel
-        // area id of old is only ID need to get more information
-        //hotel.setAreas(_hotel.getAreaId());
-        hotel.setStar(_hotel.getStars().toString());
-        hotel.setTelephone(_hotel.getTelephone());
-        hotel.setAddress(_hotel.getAddress());
+        if (!StringUtils.isEmpty(_hotel.getStars())) {
+            hotel.setStar(convertObjectToInt(_hotel.getStars()).toString());
+        }
+        if (!StringUtils.isEmpty(_hotel.getTelephone())) {
+            hotel.setTelephone(_hotel.getTelephone());
+        }
+        if (!StringUtils.isEmpty(_hotel.getAddress())) {
+            hotel.setAddress(_hotel.getAddress());
+        }
         if (!StringUtils.isEmpty(_hotel.getFax())) {
             hotel.setFax(_hotel.getFax());
         }
         List<String> amenitiesList = new ArrayList<>();
-        if (_hotel.getAmenities() != null) {
-            _hotel.getAmenities()
-                    .forEach(map -> {
+        if ((!StringUtils.isEmpty(_hotel.getAmenities()) && (!_hotel.getAmenities().isEmpty()))) {
+            _hotel.getAmenities().forEach(map -> {
                         if (map.get("^o").equals("Sunseries::Domain::Model::Hotel::Amenity")) {
                             hotelTypeList.add(map.get("description").toString());
                         } else {
@@ -1066,12 +998,11 @@ public class Application {
                     });
             hotel.setAmenities(amenitiesList);
         }
-        if (_hotel.getRemarks() != null) {
+        if (!StringUtils.isEmpty(_hotel.getRemarks())) {
             List<String> remarkList = new ArrayList<>();
             ((List<Map<String, Object>>) _hotel.getRemarks()).forEach(map -> {
-                        remarkList.add(map.get("description").toString());
-                    }
-            );
+                remarkList.add(map.get("description").toString());
+            });
             hotel.setRemark(remarkList);
         }
         if (_hotel.getLatitude() != null && _hotel.getLongitude() != null) {
