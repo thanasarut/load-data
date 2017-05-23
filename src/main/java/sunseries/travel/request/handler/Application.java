@@ -15,9 +15,8 @@ import org.springframework.util.StringUtils;
 import sunseries.travel.request.handler.message.*;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.lang.reflect.Type;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
@@ -31,7 +30,7 @@ public class Application {
         String serverPort = "8080";
 
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/hotelMetadata.sort.csv"; // 1st - hotel_meta_data
-        String fileName = "/Users/thanasarut/sunseries/source_load_data/backend_hotel.new.csv"; // 2nd - additional hotel_meta_date with room_class
+        String fileName = "/Users/thanasarut/sunseries/source_load_data/vick/backend_hotel.csv"; // 2nd - additional hotel_meta_date with room_class
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/backend_hotel.csv"; // 2nd - additional hotel_meta_date with room_class
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/room_rate.sort.csv";
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/temp.csv";
@@ -39,10 +38,11 @@ public class Application {
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/location_data.csv";
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/promotion_data.valid.csv";
 
-        File roomClassBedTypeProblemFile = new File("./roomClassBedTypeProblem.txt");
-        File childPolicyProblemFile = new File("./childPolicyProblem.txt");
-        File optionsProblemFile = new File("./optionProblem.txt");
-        File hotelMetaDataProblemFile = new File("./hotelMetaDataProblem.txt");
+        File roomClassIdDummyProblemFile = new File("/Users/thanasarut/sunseries/testing/log/roomClassIdDummyProblem.txt");
+        File roomClassBedTypeProblemFile = new File("/Users/thanasarut/sunseries/testing/log/roomClassBedTypeProblem.txt");
+        File childPolicyProblemFile = new File("/Users/thanasarut/sunseries/testing/log/childPolicyProblem.txt");
+        File optionsProblemFile = new File("/Users/thanasarut/sunseries/testing/log/optionProblem.txt");
+        File hotelMetaDataProblemFile = new File("/Users/thanasarut/sunseries/testing/log/hotelMetaDataProblem.txt");
 
         //<editor-fold desc="grep begin pattern HotelMetaData,BackendHotel,RoomRate">
         // Pattern of Hotel Metadata -- It will start with "sunsXXXX" hotel_id
@@ -110,7 +110,7 @@ public class Application {
             while ((readLine = b.readLine()) != null) {
                 // filter only match of pattern
                 if (1==1) {
-                    if (hotelMetaDataPattern.matcher(readLine).find() && false) {
+                    if (hotelMetaDataPattern.matcher(readLine).find()) {
                         //<editor-fold desc="Hotel meta data pattern using 'hotelMetadata.sort.csv' file only.">
                         //<editor-fold desc="fixed dirty data">
                         // extract field of value (which is field 4 of export.csv file
@@ -226,7 +226,7 @@ public class Application {
                             hotelMetadataFailedCounter++;
                         }
                         //</editor-fold>
-                    } else if (hotelBaseRateDataPattern.matcher(readLine).find() && false) {
+                    } else if (hotelBaseRateDataPattern.matcher(readLine).find()) {
                         //<editor-fold desc="RESP API hotel_base_rate">
                         // TODO :: display_markup from v.2 still need to add to ms-agents in v.3
                         // check pattern of room_rate that already specify room_rate data not empty_list
@@ -393,10 +393,23 @@ public class Application {
                                     if ((!StringUtils.isEmpty(_backendHotel.getRoomClasses()) && (!_backendHotel.getRoomClasses().isEmpty()))) {
                                         if (hotel.getRoomClasses().isEmpty()) {
                                             List<RoomClass> roomClassList = new ArrayList<>();
-                                            Integer _rcm_counter = 0;
+                                            Integer _rcm_counter = 1;
+                                            Collections.sort(_backendHotel.getRoomClasses(), new Comparator<Map<String, Object>>() {
+                                                @Override
+                                                public int compare(Map<String, Object> o1, Map<String, Object> o2) {
+                                                    return o1.get("id").toString().compareTo(o1.get("id").toString());
+                                                }
+                                            });
                                             for (Map<String, Object> _roomClasses : _backendHotel.getRoomClasses()) {
-                                                _rcm_counter++;
                                                 RoomClass roomClass = new RoomClass();
+                                                while (!_roomClasses.get("id").equals("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter))) {
+                                                    // add dummy_room_class_id
+                                                    RoomClass dummyRoomClass = new RoomClass();
+                                                    dummyRoomClass.setRoomClassName("dummy");
+                                                    roomClassList.add(dummyRoomClass);
+                                                    writeToFileApacheCommonIO("dummy_room_class_id:" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter) + System.lineSeparator(), roomClassIdDummyProblemFile);
+                                                    _rcm_counter++;
+                                                }
                                                 if (_roomClasses.get("id").equals("backend_hotel::bess-" + hotel.getHotelId() + "-" + String.format("%1$07d", _rcm_counter))) {
                                                     // in case that never load data of room classes to new version
 
@@ -412,7 +425,6 @@ public class Application {
                                                         roomClass.setMaxChild("0");
                                                         roomClass.setOrder(0);
                                                         writeToFileApacheCommonIO("no_max_occ:" + _roomClasses.get("id").toString() + System.lineSeparator(), roomClassBedTypeProblemFile);
-                                                        System.out.println("no_max_occ:" + _roomClasses.get("id").toString() + System.lineSeparator());
                                                     } else {
                                                         roomClass.setMaxOccupancyExcludeExtraBed(convertObjectToInt(_roomClasses.get("max_occupancy_without_extra_bed")).toString());
                                                         roomClass.setMaxOccupancyIncludeExtraBed(convertObjectToInt(_roomClasses.get("max_occupancy_with_extra_bed")).toString());
@@ -468,11 +480,9 @@ public class Application {
                                                     }
                                                     roomClass.setBedTypes(bedTypeList);
                                                     //</editor-fold>
-                                                } else {
-                                                    // add dummy roomClass
-                                                    roomClass.setRoomClassName("dummy");
+                                                    roomClassList.add(roomClass);
+                                                    _rcm_counter++;
                                                 }
-                                                roomClassList.add(roomClass);
                                             }
                                             payload = "{\"type\":\"create_room_class\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\": {\"room_classes\":" + new Gson().toJson(roomClassList) + "}}}";
                                             JsonObject jsonCreateRoomClassesResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId() + "/room-classes" + "?token=" + loginToken, payload), JsonObject.class);
@@ -1057,4 +1067,5 @@ public class Application {
             e.printStackTrace();
         }
     }
+
 }
