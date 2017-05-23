@@ -38,7 +38,7 @@ public class _HotelMetadata implements Serializable {
     @SerializedName("latitude")
     private String latitude;
     @SerializedName("images")
-    private List<Map<String, Object>> images;
+    private List<_Image> images;
     @SerializedName("room_count")
     private Integer roomCount;
     @SerializedName("fax")
@@ -158,11 +158,11 @@ public class _HotelMetadata implements Serializable {
         this.amenities = amenities;
     }
 
-    public List<Map<String, Object>> getImages() {
+    public List<_Image> getImages() {
         return images;
     }
 
-    public void setImages(List<Map<String, Object>> images) {
+    public void setImages(List<_Image> images) {
         this.images = images;
     }
 
