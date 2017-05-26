@@ -972,15 +972,19 @@ public class Application {
                                                                         } else {
                                                                             if (_roomPromotionSpec.getSelf().get("breakfast_applicibility").equals("compulsory")) {
                                                                                 if (StringUtils.isEmpty(_roomPromotionSpec.getSelf().get("breakfast"))) {
-                                                                                    isFreeNightSpecProblem = true;
                                                                                     writeToFileApacheCommonIO("FreeNight - compulsary not specify room_rate: " + hotelRoomClassId + ", promotion_id: " + _promotion.getId() + System.lineSeparator(), promotionDataProblemFile);
                                                                                 } else {
                                                                                     // normal
                                                                                 }
                                                                             } else {
                                                                                 if (!StringUtils.isEmpty(_roomPromotionSpec.getSelf().get("breakfast"))) {
-                                                                                    isFreeNightSpecProblem = true;
-                                                                                    writeToFileApacheCommonIO("FreeNight - free but specify room_rate: " + hotelRoomClassId + ", promotion_id: " + _promotion.getId() + System.lineSeparator(), promotionDataProblemFile);
+                                                                                    Map<String, Object> _breakfast = (Map<String, Object>)_roomPromotionSpec.getSelf().get("breakfast");
+                                                                                    if (!_breakfast.get("cents").toString().equals("0.0") && !_breakfast.get("cents").toString().equals("0")) {
+                                                                                        writeToFileApacheCommonIO("FreeNight - free but specify room_rate: " + hotelRoomClassId + ", promotion_id: " + _promotion.getId() + System.lineSeparator(), promotionDataProblemFile);
+                                                                                    }
+                                                                                    if (_breakfast.get("currency").toString().replaceAll("\"","").equals(freeNightPromotion.getCurrencyCode())) {
+                                                                                        writeToFileApacheCommonIO("FreeNight - free - room_rate_currency not same with promotion_currency : " + hotelRoomClassId + ", promotion_id: " + _promotion.getId() + System.lineSeparator(), promotionDataProblemFile);
+                                                                                    }
                                                                                 } else {
                                                                                     // normal
                                                                                 }
@@ -997,7 +1001,7 @@ public class Application {
                                                                         if (!isFreeNightSpecProblem) {
                                                                             freeNightRateSpecificationList.add(new FreeNightRateSpecification(
                                                                                     _roomClassName.substring(_roomClassName.indexOf("suns")),
-                                                                                    (_roomPromotionSpec.getSelf().get("breakfast_applicibility").toString().equals("free"))? "0":_roomPromotionSpec.getSelf().get("breakfast").toString(),
+                                                                                    (_roomPromotionSpec.getSelf().get("breakfast_applicibility").toString().equals("free"))? "0.0":String.format("%1.2f", Float.parseFloat(((Map<String, Object>)_roomPromotionSpec.getSelf().get("breakfast")).get("cents").toString()) / 100.0),
                                                                                     _roomPromotionSpec.getSelf().get("breakfast_applicibility").toString(),
                                                                                     transformBooleanObject(_roomPromotionSpec.getSelf().get("extra_bed_is_free")),
                                                                                     transformBooleanObject(_roomPromotionSpec.getSelf().get("extra_bed_includes_breakfast"))));
