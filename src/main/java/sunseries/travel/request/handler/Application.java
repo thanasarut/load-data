@@ -2,7 +2,6 @@ package sunseries.travel.request.handler;
 
 import com.google.common.base.CaseFormat;
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.internal.LinkedTreeMap;
 import com.google.gson.reflect.TypeToken;
@@ -10,19 +9,16 @@ import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import org.apache.commons.io.FileUtils;
-import org.msgpack.util.json.JSON;
-import org.omg.PortableServer.REQUEST_PROCESSING_POLICY_ID;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.util.StringUtils;
-import sun.util.resources.cldr.se.CurrencyNames_se;
 import sunseries.travel.request.handler.message.*;
 
 import java.io.*;
-import java.lang.reflect.Type;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
+import static java.lang.Thread.MAX_PRIORITY;
 import static java.lang.Thread.sleep;
 
 @SpringBootApplication
@@ -32,7 +28,7 @@ public class Application {
         String serverHost = "127.0.0.1";
         String serverPort = "8080";
 
-        //String fileName = "/Users/thanasarut/sunseries/source_load_data/hotelMetadata.sort.csv"; // 1st - hotel_meta_data
+        //String fileName = "/Users/thanasarut/sunseries/source_load_data/vick/hotelMetadata.sort.csv"; // 1st - hotel_meta_data
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/vick/backend_hotel.csv"; // 2nd - additional hotel_meta_date with room_class
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/temp.csv";
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/data_abook_127.0.0.1.csv";
@@ -795,6 +791,7 @@ public class Application {
                         System.out.println(jsonString);
 
                         _PromotionContainer _promotionContainer = new Gson().fromJson(jsonString, _PromotionContainer.class);
+                        String hotelId = _promotionContainer.getHotelServiceId().substring(_promotionContainer.getHotelServiceId().indexOf("suns"));
                         PromotionContainer promotionContainer = new PromotionContainer();
                         List<Promotion> promotionList = new ArrayList<>();
                         Boolean isDataProblem = false;
@@ -843,7 +840,7 @@ public class Application {
                                 String payload = "{\"type\":\"create_hotel_promotion_container\",\"origin\":\"ms-load-data\",\"event_data\":{\"promotion_container\": " + new Gson().toJson(promotionContainer) + "}}";
                                 JsonObject jsonAddPromotionContainerResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" +
                                         _promotionContainer.getHotelServiceId().substring(_promotionContainer.getHotelServiceId().indexOf("suns")) + "/promotion-containers?token=" + loginToken, payload), JsonObject.class);
-                                System.out.println("promotion_container_id: " + jsonAddPromotionContainerResponse.get("id").toString() + ", status: " + jsonAddPromotionContainerResponse.get("status").toString());
+                                System.out.println("hotel_id: " + hotelId + ", promotion_container_id: " + jsonAddPromotionContainerResponse.get("id").toString() + ", status: " + jsonAddPromotionContainerResponse.get("status").toString());
                                 sleep(100);
                             }
                             //</editor-fold>
@@ -852,10 +849,8 @@ public class Application {
                         //<editor-fold desc="get v3 room_class">
                         JsonObject jsonGetRoomClasses = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + _promotionContainer.getHotelServiceId().substring(_promotionContainer.getHotelServiceId().indexOf("suns")) + "/room-classes?token=" + loginToken), JsonObject.class);
                         List<RoomClass> hotelRoomClassList = null;
-                        String hotelRoomClassId = null;
                         if (jsonGetRoomClasses.get("status").toString().replaceAll("\"", "").equals("SUCCESS") && jsonGetRoomClasses.get("room_classes").isJsonArray()) {
                             hotelRoomClassList = new Gson().fromJson(jsonGetRoomClasses.get("room_classes"), new TypeToken<List<RoomClass>>(){}.getType());
-                            hotelRoomClassId = hotelRoomClassList.get(0).getRoomClassId().substring(hotelRoomClassList.get(0).getRoomClassId().indexOf("suns"),9);
                         } else {
                             // having problem to get all room-class of hotel
                         }
@@ -886,7 +881,7 @@ public class Application {
                                         case "Sunseries::Domain::Model::FreeProductPromotion":
                                             FreeProductPromotion freeProductPromotion = new FreeProductPromotion();
                                             freeProductPromotion.setType("free_product");
-                                            isPromotionProblem = transformPromotionGeneric(_promotion, freeProductPromotion, hotelRoomClassList, promotionDataProblemFile);
+                                            isPromotionProblem = transformPromotionGeneric(_promotion, freeProductPromotion, hotelId, hotelRoomClassList, promotionDataProblemFile);
 
                                             if (!StringUtils.isEmpty(_promotion.getSpec())) {
                                                 _Spec _spec = new Gson().fromJson(new Gson().toJson(_promotion.getSpec()), _Spec.class);
@@ -918,9 +913,9 @@ public class Application {
                                             if (!isPromotionProblem) {
                                                 String payload2 = "{\"type\":\"create_hotel_promotion\",\"origin\":\"ms-load-data\",\"event_data\":{\"promotion\": " + new Gson().toJson(freeProductPromotion) + "}}";
                                                 JsonObject jsonAddPromotionResponse = new Gson().fromJson(
-                                                        doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotelRoomClassId + "/promotion-containers/" +
+                                                        doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotelId + "/promotion-containers/" +
                                                                 _promotionContainer.getId() + "/promotions?token=" + loginToken, payload2), JsonObject.class);
-                                                System.out.println("hotel_id: " + hotelRoomClassId + ", promotion_container_id: " + _promotionContainer.getId() +
+                                                System.out.println("hotel_id: " + hotelId + ", promotion_container_id: " + _promotionContainer.getId() +
                                                         ", promotion_id: " + jsonAddPromotionResponse.get("id").toString() + ", status: " + jsonAddPromotionResponse.get("status").toString());
                                                 sleep(50);
                                             } else {
@@ -936,7 +931,7 @@ public class Application {
                                         case "Sunseries::Domain::Model::FreeNightPromotion":
                                             FreeNightPromotion freeNightPromotion = new FreeNightPromotion();
                                             freeNightPromotion.setType("free_night");
-                                            isPromotionProblem = transformPromotionGeneric(_promotion, freeNightPromotion, hotelRoomClassList, promotionDataProblemFile);
+                                            isPromotionProblem = transformPromotionGeneric(_promotion, freeNightPromotion, hotelId, hotelRoomClassList, promotionDataProblemFile);
 
                                             if (!StringUtils.isEmpty(_promotion.getSpec())) {
                                                 _HashWithIndifferentAccess _args = getHashIndifferentAccessObject(_promotion.getSpec().get("args"));
@@ -960,73 +955,39 @@ public class Application {
                                                     if (!StringUtils.isEmpty(_args.getSelf().get("rate_table"))) {
                                                         List<FreeNightRateSpecification> freeNightRateSpecificationList = new ArrayList<>();
                                                         _HashWithIndifferentAccess _rate_table = new Gson().fromJson(new Gson().toJson(_args.getSelf().get("rate_table")), _HashWithIndifferentAccess.class);
-                                                        if (_rate_table.getO() != null) {
-                                                            if (!_rate_table.getSelf().isEmpty()) {
-                                                                for (String _roomClassName : _rate_table.getSelf().keySet()) {
-                                                                    Boolean isFreeNightSpecProblem = false;
-                                                                    _HashWithIndifferentAccess _roomPromotionSpec = getHashIndifferentAccessObject(_rate_table.getSelf().get(_roomClassName));
-                                                                    if (_roomPromotionSpec.getO() != null) {
-                                                                        //<editor-fold desc="transform FreeNightSpec">
-                                                                        if (StringUtils.isEmpty(_roomPromotionSpec.getSelf().get("breakfast_applicibility"))) {
-                                                                           isFreeNightSpecProblem = true;
-                                                                        } else {
-                                                                            if (_roomPromotionSpec.getSelf().get("breakfast_applicibility").equals("compulsory")) {
-                                                                                if (StringUtils.isEmpty(_roomPromotionSpec.getSelf().get("breakfast"))) {
-                                                                                    writeToFileApacheCommonIO("FreeNight - compulsary not specify room_rate: " + hotelRoomClassId + ", promotion_id: " + _promotion.getId() + System.lineSeparator(), promotionDataProblemFile);
-                                                                                } else {
-                                                                                    // normal
-                                                                                }
-                                                                            } else {
-                                                                                if (!StringUtils.isEmpty(_roomPromotionSpec.getSelf().get("breakfast"))) {
-                                                                                    Map<String, Object> _breakfast = (Map<String, Object>)_roomPromotionSpec.getSelf().get("breakfast");
-                                                                                    if (!_breakfast.get("cents").toString().equals("0.0") && !_breakfast.get("cents").toString().equals("0")) {
-                                                                                        writeToFileApacheCommonIO("FreeNight - free but specify room_rate: " + hotelRoomClassId + ", promotion_id: " + _promotion.getId() + System.lineSeparator(), promotionDataProblemFile);
-                                                                                    }
-                                                                                    if (_breakfast.get("currency").toString().replaceAll("\"","").equals(freeNightPromotion.getCurrencyCode())) {
-                                                                                        writeToFileApacheCommonIO("FreeNight - free - room_rate_currency not same with promotion_currency : " + hotelRoomClassId + ", promotion_id: " + _promotion.getId() + System.lineSeparator(), promotionDataProblemFile);
-                                                                                    }
-                                                                                } else {
-                                                                                    // normal
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                        if (StringUtils.isEmpty(_roomPromotionSpec.getSelf().get("extra_bed_is_free"))) {
-                                                                            // normal --> means extra_bed_is_free = false;
-                                                                        }
-                                                                        if (StringUtils.isEmpty(_roomPromotionSpec.getSelf().get("extra_bed_includes_breakfast"))) {
-                                                                            // normal --> means extra_bed_includes_breakfast = false;
-                                                                        }
-                                                                        //</editor-fold>
-
-                                                                        if (!isFreeNightSpecProblem) {
-                                                                            freeNightRateSpecificationList.add(new FreeNightRateSpecification(
-                                                                                    _roomClassName.substring(_roomClassName.indexOf("suns")),
-                                                                                    (_roomPromotionSpec.getSelf().get("breakfast_applicibility").toString().equals("free"))? "0.0":String.format("%1.2f", Float.parseFloat(((Map<String, Object>)_roomPromotionSpec.getSelf().get("breakfast")).get("cents").toString()) / 100.0),
-                                                                                    _roomPromotionSpec.getSelf().get("breakfast_applicibility").toString(),
-                                                                                    transformBooleanObject(_roomPromotionSpec.getSelf().get("extra_bed_is_free")),
-                                                                                    transformBooleanObject(_roomPromotionSpec.getSelf().get("extra_bed_includes_breakfast"))));
-                                                                        } else {
-                                                                            isPromotionProblem = true;
-                                                                        }
-                                                                    } else {
-                                                                        System.out.print("free_night_spec not hash");
-                                                                    }
-                                                                }
-                                                            } else {
-                                                                System.out.print("rate_table is empty-list");
-                                                            }
-                                                        } else {
-                                                            System.out.println("rate_table not Hash");
-                                                        }
-
+                                                        isPromotionProblem = transformHashRateTable(freeNightRateSpecificationList, _rate_table, hotelId, _promotion.getId(), freeNightPromotion.getCurrencyCode(), promotionDataProblemFile);
                                                         freeNightPromotion.setFreeNightRateSpecifications(freeNightRateSpecificationList);
                                                     } else {
                                                         isPromotionProblem = true;
                                                     }
                                                     //</editor-fold>
                                                 } else {
-                                                    isPromotionProblem = true;
-
+                                                    //<editor-fold desc="args == Map">
+                                                    Map<String, Object> _mapArgs = new Gson().fromJson(new Gson().toJson(_promotion.getSpec().get("args")), Map.class);
+                                                    if (!StringUtils.isEmpty(_mapArgs.get(":currency_code"))) {
+                                                        freeNightPromotion.setCurrencyCode(_mapArgs.get(":currency_code").toString());
+                                                    } else {
+                                                        isPromotionProblem = true;
+                                                    }
+                                                    if (!StringUtils.isEmpty(_mapArgs.get(":free_nights"))) {
+                                                        freeNightPromotion.setFreeNights(convertObjectToInt(_mapArgs.get(":free_nights")));
+                                                    } else {
+                                                        isPromotionProblem = true;
+                                                    }
+                                                    if (!StringUtils.isEmpty(_mapArgs.get(":paid_nights"))) {
+                                                        freeNightPromotion.setPaidNights(convertObjectToInt(_mapArgs.get(":paid_nights")));
+                                                    } else {
+                                                        isPromotionProblem = true;
+                                                    }
+                                                    if (!StringUtils.isEmpty(_mapArgs.get(":rate_table"))) {
+                                                        List<FreeNightRateSpecification> freeNightRateSpecificationList = new ArrayList<>();
+                                                        _HashWithIndifferentAccess _rate_table = new Gson().fromJson(new Gson().toJson(_mapArgs.get(":rate_table")), _HashWithIndifferentAccess.class);
+                                                        isPromotionProblem = transformHashRateTable(freeNightRateSpecificationList, _rate_table, hotelId, _promotion.getId(), freeNightPromotion.getCurrencyCode(), promotionDataProblemFile);
+                                                        freeNightPromotion.setFreeNightRateSpecifications(freeNightRateSpecificationList);
+                                                    } else {
+                                                        isPromotionProblem = true;
+                                                    }
+                                                    //</editor-fold>
                                                 }
                                             }
 
@@ -1034,26 +995,23 @@ public class Application {
                                             if (!isPromotionProblem) {
                                                 Integer sum = freeNightPromotion.getFreeNights() + freeNightPromotion.getPaidNights();
                                                 if (!StringUtils.isEmpty(freeNightPromotion.getMinimumNightStay()) && !freeNightPromotion.getMinimumNightStay().equals(sum)) {
-                                                    isPromotionProblem = true;
-                                                    writeToFileApacheCommonIO("minimum_night_stay (inside/total):" + hotelRoomClassId +
+                                                    writeToFileApacheCommonIO("minimum_night_stay (inside/total):" + hotelId +
                                                             ", promotion_id: " + _promotion.getId() + System.lineSeparator(), promotionDataProblemFile);
                                                 }
                                                 if (!StringUtils.isEmpty(freeNightPromotion.getMinimumNightStayInsidePromotion()) && !freeNightPromotion.getMinimumNightStayInsidePromotion().equals(sum)) {
-                                                    isPromotionProblem = true;
-                                                    writeToFileApacheCommonIO("minimum_night_stay (inside/total):" + hotelRoomClassId +
+                                                    writeToFileApacheCommonIO("minimum_night_stay (inside/total):" + hotelId +
                                                             ", promotion_id: " + _promotion.getId() + System.lineSeparator(), promotionDataProblemFile);
                                                 }
                                             }
                                             //</editor-fold>
 
                                             //<editor-fold desc="RestAPI to create FreeNightPromotion">
-                                            //if (!isPromotionProblem) {
-                                            if (0==1) {
+                                            if (!isPromotionProblem) {
                                                 String payload2 = "{\"type\":\"create_hotel_promotion\",\"origin\":\"ms-load-data\",\"event_data\":{\"promotion\": " + new Gson().toJson(freeNightPromotion) + "}}";
                                                 JsonObject jsonAddPromotionResponse = new Gson().fromJson(
-                                                        doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotelRoomClassId + "/promotion-containers/" +
+                                                        doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotelId + "/promotion-containers/" +
                                                                 _promotionContainer.getId() + "/promotions?token=" + loginToken, payload2), JsonObject.class);
-                                                System.out.println("hotel_id: " + hotelRoomClassId + ", promotion_container_id: " + _promotionContainer.getId() +
+                                                System.out.println("hotel_id: " + hotelId + ", promotion_container_id: " + _promotionContainer.getId() +
                                                         ", promotion_id: " + jsonAddPromotionResponse.get("id").toString() + ", status: " + jsonAddPromotionResponse.get("status").toString());
                                                 sleep(50);
                                             } else {
@@ -1088,6 +1046,91 @@ public class Application {
         System.out.println(", BackendHotel miss match id: " + backendHotelMetadataMissMatchCounter);
     }
 
+    private static Boolean transformHashRateTable(List<FreeNightRateSpecification> freeNightRateSpecificationList,
+                                                  _HashWithIndifferentAccess _rate_table,
+                                                  String hotelRoomClassId, String promotionId, String promotionCurrency,
+                                                  File promotionDataProblemFile) {
+        Boolean isDataProblem = false;
+        if (_rate_table.getO() != null) {
+            //<editor-fold desc="rate_table == Hash">
+            if (!_rate_table.getSelf().isEmpty()) {
+                for (String _roomClassName : _rate_table.getSelf().keySet()) {
+                    Boolean isFreeNightSpecProblem = false;
+                    _HashWithIndifferentAccess _roomPromotionSpec = getHashIndifferentAccessObject(_rate_table.getSelf().get(_roomClassName));
+                    if (_roomPromotionSpec.getO() != null) {
+                        //<editor-fold desc="FreeNightSpec == Hash">
+                        //<editor-fold desc="transform FreeNightSpec">
+                        if (StringUtils.isEmpty(_roomPromotionSpec.getSelf().get("breakfast_applicibility"))) {
+                            isFreeNightSpecProblem = true;
+                        } else {
+                            if (_roomPromotionSpec.getSelf().get("breakfast_applicibility").equals("compulsory")) {
+                                if (StringUtils.isEmpty(_roomPromotionSpec.getSelf().get("breakfast"))) {
+                                    writeToFileApacheCommonIO("FreeNight - compulsary not specify room_rate: " + hotelRoomClassId + ", promotion_id: " + promotionId + System.lineSeparator(), promotionDataProblemFile);
+                                } else {
+                                    // normal
+                                }
+                            } else {
+                                if (!StringUtils.isEmpty(_roomPromotionSpec.getSelf().get("breakfast"))) {
+                                    Map<String, Object> _breakfast = (Map<String, Object>)_roomPromotionSpec.getSelf().get("breakfast");
+                                    if (!_breakfast.get("cents").toString().equals("0.0") && !_breakfast.get("cents").toString().equals("0")) {
+                                        writeToFileApacheCommonIO("FreeNight - free but specify room_rate: " + hotelRoomClassId + ", promotion_id: " + promotionId + System.lineSeparator(), promotionDataProblemFile);
+                                    }
+                                    if (_breakfast.get("currency").toString().replaceAll("\"","").equals(promotionCurrency)) {
+                                        writeToFileApacheCommonIO("FreeNight - free - room_rate_currency not same with promotion_currency : " + hotelRoomClassId + ", promotion_id: " + promotionId + System.lineSeparator(), promotionDataProblemFile);
+                                    }
+                                } else {
+                                    // normal
+                                }
+                            }
+                        }
+                        if (StringUtils.isEmpty(_roomPromotionSpec.getSelf().get("extra_bed_is_free"))) {
+                            // normal --> means extra_bed_is_free = false;
+                        }
+                        if (StringUtils.isEmpty(_roomPromotionSpec.getSelf().get("extra_bed_includes_breakfast"))) {
+                            // normal --> means extra_bed_includes_breakfast = false;
+                        }
+                        //</editor-fold>
+
+                        if (!isFreeNightSpecProblem) {
+                            //<editor-fold desc="check valid data">
+                            String roomClass =_roomClassName.substring(_roomClassName.indexOf("suns"));
+                            String breakfastApplicability = _roomPromotionSpec.getSelf().get("breakfast_applicibility").toString();
+                            String breakfast;
+                            if (breakfastApplicability.equals("free")) {
+                                breakfast = "0.0";
+                            } else {
+                                if (!StringUtils.isEmpty(_roomPromotionSpec.getSelf().get("breakfast"))) {
+                                    Map<String, Object> _breakfast = (Map<String, Object>)_roomPromotionSpec.getSelf().get("breakfast");
+                                    breakfast = String.format("%1.2f", Float.parseFloat(_breakfast.get("cents").toString()) / 100.0);
+                                } else {
+                                    breakfast = "0.0";
+                                }
+                            }
+                            Boolean extraBedIsFree = transformBooleanObject(_roomPromotionSpec.getSelf().get("extra_bed_is_free"));
+                            Boolean extraBedIncludeBreakfast = transformBooleanObject(_roomPromotionSpec.getSelf().get("extra_bed_includes_breakfast"));
+                            //</editor-fold>
+                            freeNightRateSpecificationList.add(new FreeNightRateSpecification(roomClass, breakfastApplicability, breakfast, extraBedIsFree, extraBedIncludeBreakfast));
+                        } else {
+                            isDataProblem = true;
+                        }
+                        //</editor-fold>
+                    } else {
+                        System.out.print("free_night_spec not hash");
+                    }
+                }
+            } else {
+                System.out.print("rate_table is empty-list");
+            }
+            //</editor-fold>
+        } else {
+            //<editor-fold desc="rate_table <> Hash">
+            System.out.println("rate_table not Hash");
+            //</editor-fold>
+        }
+
+        return isDataProblem;
+    }
+
     private static Boolean transformBooleanObject(Object _object) {
         Boolean retBool;
         if (_object != null && !StringUtils.isEmpty(_object.toString())) {
@@ -1102,12 +1145,12 @@ public class Application {
         return new Gson().fromJson(new Gson().toJson(_object), _HashWithIndifferentAccess.class);
     }
 
-    private static Boolean transformPromotionGeneric(_Promotion _promotion, Promotion promotion, List<RoomClass> roomClassList, File promotionDataProblemFile) {
-        Boolean retBool = false;
+    private static Boolean transformPromotionGeneric(_Promotion _promotion, Promotion promotion, String hotelId, List<RoomClass> roomClassList, File promotionDataProblemFile) {
+        Boolean isDataProblem = false;
         if (!StringUtils.isEmpty(_promotion.getId())) {
             promotion.setId(_promotion.getId());
         } else {
-            retBool = true;
+            isDataProblem = true;
         }
         if (!StringUtils.isEmpty(_promotion.getBlackoutPeriod()) && !_promotion.getBlackoutPeriod().isEmpty()) {
             promotion.setBlackoutPeriods(new ArrayList<>());
@@ -1120,7 +1163,7 @@ public class Application {
                     if (roomClassList != null) {
                         roomClassList.forEach(roomClass -> blackoutPeriod.getRoomClass().add(roomClass.getRoomClassId()));
                     } else {
-                        retBool = true;
+                        writeToFileApacheCommonIO("hotel_id: " + hotelId + ", promotion_id: " + _promotion.getId() + ", promotion_has_blackout_period_but_no_room_class_in_ms_hotels" + System.lineSeparator(), promotionDataProblemFile);
                     }
                 } else {
                     _period.getRoomClassIds().stream().forEach(_roomClass -> blackoutPeriod.getRoomClass().add(_roomClass.substring(_roomClass.indexOf("suns"))));
@@ -1159,29 +1202,29 @@ public class Application {
             if (!StringUtils.isEmpty(_spec.getApplicablePeriod().getFrom())) {
                 promotion.setApplicableFrom(transformOldDateToString(_spec.getApplicablePeriod().getFrom()));
             } else {
-                retBool = true;
+                isDataProblem = true;
             }
             if (!StringUtils.isEmpty(_spec.getApplicablePeriod().getTo())) {
                 promotion.setApplicableTo(transformOldDateToString(_spec.getApplicablePeriod().getTo()));
             } else {
-                retBool = true;
+                isDataProblem = true;
             }
             if (!StringUtils.isEmpty(_spec.getApplicableDays())) {
                 promotion.setApplicableDaysOfWeek(_spec.getApplicableDays());
             } else {
-                retBool = true;
+                isDataProblem = true;
             }
             if (!StringUtils.isEmpty(_spec.getMarket())) {
                 promotion.setMarket(_spec.getMarket());
             } else {
-                retBool = true;
+                isDataProblem = true;
             }
             if (!StringUtils.isEmpty(_spec.getEarlyBird())) {
                 if (_spec.getEarlyBird()) {
                     if (!StringUtils.isEmpty(_spec.getEarlybirdDaysInAdvance())) {
                         promotion.setEarlyBirdsDays(convertObjectToInt(_spec.getEarlybirdDaysInAdvance()));
                     } else {
-                        retBool = true;
+                        isDataProblem = true;
                     }
                 }
             }
@@ -1214,7 +1257,7 @@ public class Application {
                     promotion.setApplicableRoomClass(new ArrayList<>());
                     roomClassList.forEach(roomClass -> promotion.getApplicableRoomClass().add(roomClass.getRoomClassId()));
                 } else {
-                    retBool = true;
+                    isDataProblem = true;
                 }
             }
             if (!StringUtils.isEmpty(_spec.getArgs().getO()) && (_spec.getArgs().getO().equals("ActiveSupport::HashWithIndifferentAccess"))) {
@@ -1231,12 +1274,12 @@ public class Application {
                             promotion.setPromotionCharges(promotionChargeList);
                         } else {
                             System.out.println("problem with promotionChargeList");
-                            retBool = true;
+                            isDataProblem = true;
                         }
                     } else {
                         // args.charge <> HashWithIndifferentAccess
                         System.out.println("problem");
-                        retBool = true;
+                        isDataProblem = true;
                     }
                 } else {
                     // args.charge = [] --> normal
@@ -1245,7 +1288,7 @@ public class Application {
                 if (!StringUtils.isEmpty(_spec.getArgs().getSelf().get("charge_currency_code"))) {
                     promotion.setCurrencyCode(_spec.getArgs().getSelf().get("charge_currency_code").toString().replaceAll("\"", ""));
                 } else {
-                    retBool = true;
+                    isDataProblem = true;
                 }
                 //</editor-fold>
             } else {
@@ -1263,12 +1306,12 @@ public class Application {
                             promotion.setPromotionCharges(promotionChargeList);
                         } else {
                             System.out.println("problem with promotionChargeList");
-                            retBool = true;
+                            isDataProblem = true;
                         }
                     } else {
                         // args.charge <> HashWithIndifferentAccess
                         System.out.println("problem");
-                        retBool = true;
+                        isDataProblem = true;
                     }
                 } else {
                     // args.charge = [] --> normal
@@ -1277,28 +1320,27 @@ public class Application {
                 if (!StringUtils.isEmpty(mapArgs.get(":charge_currency_code"))) {
                     promotion.setCurrencyCode(mapArgs.get(":charge_currency_code").toString());
                 } else {
-                    retBool = true;
+                    isDataProblem = true;
                 }
                 //</editor-fold>
             }
         } else {
             // spec not specify
-            retBool = true;
+            isDataProblem = true;
         }
 
         //<editor-fold desc="check valid mininumNightStay">
         if (!StringUtils.isEmpty(promotion.getMinimumNightStay()) && !StringUtils.isEmpty(promotion.getMinimumNightStayInsidePromotion())) {
-            retBool = true;
-            writeToFileApacheCommonIO("minimum_night_stay (inside/total):" + roomClassList.get(0).getRoomClassId().substring(roomClassList.get(0).getRoomClassId().indexOf("suns"),9) +
+            writeToFileApacheCommonIO("minimum_night_stay (inside/total):" + hotelId +
                     ", promotion_id: " + _promotion.getId() + System.lineSeparator(), promotionDataProblemFile);
         }
         //</editor-fold>
 
-        return retBool;
+        return isDataProblem;
     }
 
     private static boolean transformPromotionChargeListHashIndifferentAccess(List<_HashWithIndifferentAccess> _promotionChargeList, List<PromotionCharge> promotionChargeList) {
-        Boolean returnBool = false;
+        Boolean transformSuccess = false;
         for (_HashWithIndifferentAccess _charge : _promotionChargeList) {
             //<editor-fold desc="promotion_charge transform">
             _PromotionCharge _promotionCharge = new Gson().fromJson(new Gson().toJson(_charge.getSelf()), _PromotionCharge.class);
@@ -1348,13 +1390,13 @@ public class Application {
             //</editor-fold>
             if (!isPromotionChargeProblem) {
                 promotionChargeList.add(promotionCharge);
-                returnBool = true;
+                transformSuccess = true;
             } else {
                 System.out.println("problem with some promotion_charge");
-                returnBool = false;
+                transformSuccess = false;
             }
         }
-        return returnBool;
+        return transformSuccess;
     }
 
     private static String transformOldDateToString(Object date) {
