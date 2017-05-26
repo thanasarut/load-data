@@ -21,6 +21,9 @@ public class _Spec implements Serializable {
     @SerializedName("code")
     private String code;
 
+    @SerializedName("internal_code")
+    private String internalCode;
+
     @SerializedName("hotel_service_id")
     private String hotelServiceId;
 
@@ -35,6 +38,9 @@ public class _Spec implements Serializable {
 
     @SerializedName("is_early_bird")
     private Boolean isEarlyBird;
+
+    @SerializedName("earlybird_days_in_advance")
+    private Integer earlybirdDaysInAdvance;
 
     @SerializedName("type")
     private String type;
@@ -304,5 +310,21 @@ public class _Spec implements Serializable {
 
     public void setArgs(_HashWithIndifferentAccess args) {
         this.args = args;
+    }
+
+    public String getInternalCode() {
+        return internalCode;
+    }
+
+    public void setInternalCode(String internalCode) {
+        this.internalCode = internalCode;
+    }
+
+    public Integer getEarlybirdDaysInAdvance() {
+        return earlybirdDaysInAdvance;
+    }
+
+    public void setEarlybirdDaysInAdvance(Integer earlybirdDaysInAdvance) {
+        this.earlybirdDaysInAdvance = earlybirdDaysInAdvance;
     }
 }

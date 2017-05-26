@@ -23,10 +23,6 @@ public class _Promotion implements Serializable {
     @SerializedName("blackout_periods")
     private List<_BlackoutPeriod> blackoutPeriod;
 
-    // Todo: double check again that promotion_charge is args or not?
-    @SerializedName("args")
-    private Map<String, Object> promotionCharge;
-
     @SerializedName("spec")
     private Map<String, Object> spec;
 
@@ -68,14 +64,6 @@ public class _Promotion implements Serializable {
 
     public void setBlackoutPeriod(List<_BlackoutPeriod> blackoutPeriod) {
         this.blackoutPeriod = blackoutPeriod;
-    }
-
-    public Map<String, Object> getPromotionCharge() {
-        return promotionCharge;
-    }
-
-    public void setPromotionCharge(Map<String, Object> promotionCharge) {
-        this.promotionCharge = promotionCharge;
     }
 
     public Map<String, Object> getSpec() {

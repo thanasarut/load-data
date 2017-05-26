@@ -10,8 +10,11 @@ import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import org.apache.commons.io.FileUtils;
+import org.msgpack.util.json.JSON;
+import org.omg.PortableServer.REQUEST_PROCESSING_POLICY_ID;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.util.StringUtils;
+import sun.util.resources.cldr.se.CurrencyNames_se;
 import sunseries.travel.request.handler.message.*;
 
 import java.io.*;
@@ -30,19 +33,18 @@ public class Application {
         String serverPort = "8080";
 
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/hotelMetadata.sort.csv"; // 1st - hotel_meta_data
-        String fileName = "/Users/thanasarut/sunseries/source_load_data/vick/backend_hotel.csv"; // 2nd - additional hotel_meta_date with room_class
-        //String fileName = "/Users/thanasarut/sunseries/source_load_data/backend_hotel.csv"; // 2nd - additional hotel_meta_date with room_class
-        //String fileName = "/Users/thanasarut/sunseries/source_load_data/room_rate.sort.csv";
+        //String fileName = "/Users/thanasarut/sunseries/source_load_data/vick/backend_hotel.csv"; // 2nd - additional hotel_meta_date with room_class
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/temp.csv";
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/data_abook_127.0.0.1.csv";
         //String fileName = "/Users/thanasarut/sunseries/source_load_data/location_data.csv";
-        //String fileName = "/Users/thanasarut/sunseries/source_load_data/promotion_data.valid.csv";
+        String fileName = "/Users/thanasarut/sunseries/source_load_data/vick/promotion_container.csv";
 
         File roomClassIdDummyProblemFile = new File("/Users/thanasarut/sunseries/testing/log/roomClassIdDummyProblem.txt");
         File roomClassBedTypeProblemFile = new File("/Users/thanasarut/sunseries/testing/log/roomClassBedTypeProblem.txt");
         File childPolicyProblemFile = new File("/Users/thanasarut/sunseries/testing/log/childPolicyProblem.txt");
         File optionsProblemFile = new File("/Users/thanasarut/sunseries/testing/log/optionProblem.txt");
         File hotelMetaDataProblemFile = new File("/Users/thanasarut/sunseries/testing/log/hotelMetaDataProblem.txt");
+        File promotionDataProblemFile = new File( "/Users/thanasarut/sunseries/testing/log/promotionDataProblem.txt");
 
         //<editor-fold desc="grep begin pattern HotelMetaData,BackendHotel,RoomRate">
         // Pattern of Hotel Metadata -- It will start with "sunsXXXX" hotel_id
@@ -57,7 +59,6 @@ public class Application {
         String hotelBaseRateDataRegEx = "^room_rate::";
         Pattern hotelBaseRateDataPattern = Pattern.compile(hotelBaseRateDataRegEx);
         //</editor-fold>
-
 
         // <editor-fold desc="grep begin pattern Location">
         // Pattern of country Metadata -- It will start with "country::{countryId}"
@@ -231,7 +232,6 @@ public class Application {
                         // TODO :: display_markup from v.2 still need to add to ms-agents in v.3
                         // check pattern of room_rate that already specify room_rate data not empty_list
                         if (!Pattern.compile(",[0-9]+,[0-9]+,[0-9]+,[{}]+").matcher(readLine).find()) {
-                            hotelBaseRateCounter++;
                             // means specify room_rate
                             // extract field of value (which is field 4 of export.csv file
                             String[] tokens = readLine.split(",[0-9]+,[0-9]+,[0-9]+,\\\"|\",[0-9]+,[0-9]+,[0-9]+$");
@@ -783,7 +783,7 @@ public class Application {
                 }
                 //</editor-fold>
 
-                if (1==0) {
+                if (1==1) {
                     //<editor-fold desc="RestAPI to load promotion_container">
                     if (promotionDataPattern.matcher(readLine).find()) {
                         // extract field of value (which is field 4 of export.csv file)
@@ -792,151 +792,284 @@ public class Application {
                         String jsonString = tokens[1].replaceAll("\"\"", "%@").replaceAll("%@", "\"");
                         //</editor-fold>
 
-                        //System.out.println(jsonString);
+                        System.out.println(jsonString);
 
                         _PromotionContainer _promotionContainer = new Gson().fromJson(jsonString, _PromotionContainer.class);
                         PromotionContainer promotionContainer = new PromotionContainer();
                         List<Promotion> promotionList = new ArrayList<>();
                         Boolean isDataProblem = false;
-                        //<editor-fold desc="promotion_containers transform">
-                        if (!StringUtils.isEmpty(_promotionContainer)) {
-                            promotionContainer.setCode(_promotionContainer.getId());
-                        } else {
-                            isDataProblem = true;
-                        }
-                        promotionContainer.setAllotmentsPromotionalEnabled(false);
-                        if (!StringUtils.isEmpty(_promotionContainer.getDescription())) {
-                            promotionContainer.setDescription(_promotionContainer.getDescription());
-                        } else {
-                            //isDataProblem = true;
-                        }
-                        if (!StringUtils.isEmpty(_promotionContainer.getName())) {
-                            promotionContainer.setName(_promotionContainer.getName());
-                        } else {
-                            isDataProblem = true;
-                        }
-                        if (!StringUtils.isEmpty(_promotionContainer.getTags())) {
-                            promotionContainer.setPromotionTag(_promotionContainer.getTags());
-                        } else {
-                            //isDataProblem = true;
-                        }
-                        //</editor-fold>
 
-                        //<editor-fold desc="RESP API for create promotion_container">
-                    /*String payload = "{\"type\":\"update_hotel\",\"origin\":\"ms-load-data\",\"event_data\":{\"hotel\": { \"hotel_id\":\"" + hotel.getHotelId() + "\", \"images\":" + new Gson().toJson(imageList) + "}}}";
-                    jsonUpdateHotelResponse = new Gson().fromJson(doHttpPatchClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotel.getHotelId().replaceAll("\"", "") + "?token=" + loginToken, payload), JsonObject.class);
-                    System.out.println("i: " + backendHotelMetadataCounter + ", id: " + jsonUpdateHotelResponse.get("id").toString() + ", hotel_update_backend :: add images status: " + jsonUpdateHotelResponse.get("status").toString());
-                    sleep(50);*/
+                        //<editor-fold desc="Check PromotionContainer Exist">
+                        Boolean isExistPromotionContainer;
+                        JsonObject jsonGetPromotionContainerResponse = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" +
+                                _promotionContainer.getHotelServiceId().substring(_promotionContainer.getHotelServiceId().indexOf("suns")) + "/promotion-containers?token=" + loginToken), JsonObject.class);
+                        if (jsonGetPromotionContainerResponse.get("status").toString().replaceAll("\"","").equals("SUCCESS")) {
+                            List<PromotionContainer> checkExistPromotionContainer = new Gson().fromJson(jsonGetPromotionContainerResponse.get("result").getAsJsonObject().get("promotion_containers"), new TypeToken<List<PromotionContainer>>(){}.getType());
+                            if (checkExistPromotionContainer.stream().anyMatch(_p_c -> _p_c.getCode().equals(_promotionContainer.getId()))) {
+                                isExistPromotionContainer = true;
+                            } else {
+                                isExistPromotionContainer = false;
+                            }
+                        } else {
+                            isExistPromotionContainer = false;
+                        }
                         //</editor-fold>
-                        String payload = "{\"type\":\"get_all_room_class\",\"origin\":\"ms-load-data\"}";
+                        if (!isExistPromotionContainer) {
+                            //<editor-fold desc="promotion_containers transform">
+                            if (!StringUtils.isEmpty(_promotionContainer.getId())) {
+                                promotionContainer.setCode(_promotionContainer.getId());
+                            } else {
+                                isDataProblem = true;
+                            }
+                            promotionContainer.setAllotmentsPromotionalEnabled(false);
+                            if (!StringUtils.isEmpty(_promotionContainer.getDescription())) {
+                                promotionContainer.setDescription(_promotionContainer.getDescription());
+                            } else {
+                                //isDataProblem = true;
+                            }
+                            if (!StringUtils.isEmpty(_promotionContainer.getName())) {
+                                promotionContainer.setName(_promotionContainer.getName());
+                            } else {
+                                isDataProblem = true;
+                            }
+                            if (!StringUtils.isEmpty(_promotionContainer.getTags())) {
+                                promotionContainer.setPromotionTag(_promotionContainer.getTags());
+                            } else {
+                                //isDataProblem = true;
+                            }
+                            //</editor-fold>
+                            //<editor-fold desc="RestAPI for create promotion_container">
+                            if (!isDataProblem) {
+                                String payload = "{\"type\":\"create_hotel_promotion_container\",\"origin\":\"ms-load-data\",\"event_data\":{\"promotion_container\": " + new Gson().toJson(promotionContainer) + "}}";
+                                JsonObject jsonAddPromotionContainerResponse = new Gson().fromJson(doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" +
+                                        _promotionContainer.getHotelServiceId().substring(_promotionContainer.getHotelServiceId().indexOf("suns")) + "/promotion-containers?token=" + loginToken, payload), JsonObject.class);
+                                System.out.println("promotion_container_id: " + jsonAddPromotionContainerResponse.get("id").toString() + ", status: " + jsonAddPromotionContainerResponse.get("status").toString());
+                                sleep(100);
+                            }
+                            //</editor-fold>
+                        }
+
+                        //<editor-fold desc="get v3 room_class">
                         JsonObject jsonGetRoomClasses = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + _promotionContainer.getHotelServiceId().substring(_promotionContainer.getHotelServiceId().indexOf("suns")) + "/room-classes?token=" + loginToken), JsonObject.class);
-                        if (!_promotionContainer.getPromotions().isEmpty()) {
-                            _promotionContainer.getPromotions().stream().forEach(_promotion -> {
-                                switch (_promotion.getO().toString()) {
-                                    case "Sunseries::Domain::Model::FreeProductPromotion":
-                                        System.out.println(jsonString);
-                                        FreeProductPromotion freeProductPromotion = new FreeProductPromotion();
-                                        freeProductPromotion.setType("free_product");
-                                        if (!StringUtils.isEmpty(_promotion.getId())) {
-                                            freeProductPromotion.setId(_promotion.getId());
-                                        } else {
-                                            // data have problem
-                                        }
-                                        if (!StringUtils.isEmpty(_promotion.getBlackoutPeriod()) && !_promotion.getBlackoutPeriod().isEmpty()) {
-                                            freeProductPromotion.setBlackoutPeriods(new ArrayList<>());
-                                            _promotion.getBlackoutPeriod().stream().forEach(_period -> {
-                                                BlackoutPeriod blackoutPeriod = new BlackoutPeriod();
-                                                blackoutPeriod.setRoomClass(new ArrayList<>());
-                                                blackoutPeriod.setBlackoutFrom(transformOldDateToString(_period.getPeriod().getFrom()));
-                                                blackoutPeriod.setBlackoutTo(transformOldDateToString(_period.getPeriod().getTo()));
-                                                if (_period.getRoomClassIds() == null) {
-                                                    if (jsonGetRoomClasses.get("status").toString().replaceAll("\"", "").equals("SUCCESS") && jsonGetRoomClasses.get("room_classes").isJsonArray()) {
-                                                        List<Map<String, String>> roomClassList = new Gson().fromJson(new Gson().toJson(jsonGetRoomClasses.get("room_classes")), List.class);
-                                                        roomClassList.forEach(roomClass -> blackoutPeriod.getRoomClass().add(roomClass.get("room_class_id").toString()));
-                                                    } else {
-                                                        System.out.println("data is problem");
-                                                    }
-                                                } else {
-                                                    _period.getRoomClassIds().stream().forEach(_roomClass -> {
-                                                        blackoutPeriod.getRoomClass().add(_roomClass.substring(_roomClass.indexOf("suns")));
-                                                    });
-                                                }
-                                                freeProductPromotion.getBlackoutPeriods().add(blackoutPeriod);
-                                            });
-                                        } else {
-                                            // normal
-                                        }
-                                        if (!StringUtils.isEmpty(_promotion.getActions()) && (!_promotion.getActions().isEmpty())) {
-                                            System.out.println("something to do");
-                                        }
-                                        if (!StringUtils.isEmpty(_promotion.getChecks()) && (!_promotion.getChecks().isEmpty())) {
-                                            System.out.println("something to do");
-                                        }
-                                        if (!StringUtils.isEmpty(_promotion.getPromotionCharge())) {
-                                            System.out.println("something to do");
-                                        }
-                                        if (!StringUtils.isEmpty(_promotion.getSpec())) {
-                                            _Spec _spec = new Gson().fromJson(new Gson().toJson(_promotion.getSpec()), _Spec.class);
-                                            freeProductPromotion.setCode(_spec.getCode());
-                                            freeProductPromotion.setApplicableFrom(transformOldDateToString(_spec.getApplicablePeriod().getFrom()));
-                                            freeProductPromotion.setApplicableTo(transformOldDateToString(_spec.getApplicablePeriod().getTo()));
-                                            freeProductPromotion.setApplicableDaysOfWeek(_spec.getApplicableDays());
-                                            // Todo:: check _spec.getEarlyBird() boolean
-                                            freeProductPromotion.setMarket(_spec.getMarket());
-                                            freeProductPromotion.setMaximumAppliedNights(convertObjectToInt(_spec.getMaximumAppliedNights()));
-                                            freeProductPromotion.setMaximumNightStay(convertObjectToInt(_spec.getMaximumNightStay()));
-                                            freeProductPromotion.setMinimumNightStay(convertObjectToInt(_spec.getMinimumNightStay()));
-                                            freeProductPromotion.setMinimumNightStayInsidePromotion(convertObjectToInt(_spec.getMinimumNightStayInsidePromotion()));
-                                            freeProductPromotion.setMinimumRooms(convertObjectToInt(_spec.getMinimumRooms()));
-                                            freeProductPromotion.setForceCombine(_spec.getForcedCombinable());
-                                            freeProductPromotion.setExclusiveCombine(_spec.getExclusive());
-                                            freeProductPromotion.setInflexible(_spec.getInflexible());
-                                            _spec.getRoomClasses().stream().forEach(_roomClass -> {
-                                                if (freeProductPromotion.getApplicableRoomClass() == null) {
-                                                    freeProductPromotion.setApplicableRoomClass(new ArrayList<>());
-                                                }
-                                                freeProductPromotion.getApplicableRoomClass().add(_roomClass.substring(_roomClass.indexOf("suns")));
-                                            });
-                                            freeProductPromotion.setBookByDate(transformOldDateToString(_spec.getBookByDate()));
-                                            freeProductPromotion.setApplicableDaysOfWeek(_spec.getApplicableDays());
-                                            if (!StringUtils.isEmpty(_spec.getArgs().getO()) && (_spec.getArgs().getO().equals("ActiveSupport::HashWithIndifferentAccess"))) {
-                                                freeProductPromotion.setCurrencyCode(_spec.getArgs().getSelf().get("charge_currency_code").toString().replaceAll("\"", ""));
-
-                                                if (freeProductPromotion.getFreeProductSpecifications() == null) {
-                                                    freeProductPromotion.setFreeProductSpecifications(new ArrayList<>());
-                                                }
-                                                ((List<String>) _spec.getArgs().getSelf().get("products")).stream().forEach(_product -> freeProductPromotion.getFreeProductSpecifications().add(_product.toString().replaceAll("\"", "")));
-                                            } else {
-                                                JsonElement jsonElement = new Gson().fromJson(new Gson().toJson(_promotion.getSpec()), JsonElement.class);
-
-                                                freeProductPromotion.setCurrencyCode(jsonElement.getAsJsonObject().get("args").getAsJsonObject().get(":charge_currency_code").toString().replaceAll("\"", ""));
-                                                jsonElement.getAsJsonObject().get("args").getAsJsonObject().get(":products").getAsJsonArray().forEach(_product -> {
-                                                    if (freeProductPromotion.getFreeProductSpecifications() == null) {
-                                                        freeProductPromotion.setFreeProductSpecifications(new ArrayList<>());
-                                                    }
-                                                    freeProductPromotion.getFreeProductSpecifications().add(_product.toString().replace("\"", ""));
-                                                });
-                                            }
-                                        }
-                                        break;
-                                    case "Sunseries::Domain::Model::FreeUpgradePromotion":
-                                        break;
-                                    case "Sunseries::Domain::Model::FreeNightWithBonusRatePromotion":
-                                        break;
-                                    case "Sunseries::Domain::Model::FreeNightPromotion":
-                                        break;
-                                    case "Sunseries::Domain::Model::RoomNightsPackagePromotion":
-                                        break;
-                                    case "Sunseries::Domain::Model::PercentageDiscountPromotion":
-                                        break;
-                                    case "Sunseries::Domain::Model::FlatRatePromotion":
-                                        break;
-                                    default:
-                                        break;
-                                }
-                            });
+                        List<RoomClass> hotelRoomClassList = null;
+                        String hotelRoomClassId = null;
+                        if (jsonGetRoomClasses.get("status").toString().replaceAll("\"", "").equals("SUCCESS") && jsonGetRoomClasses.get("room_classes").isJsonArray()) {
+                            hotelRoomClassList = new Gson().fromJson(jsonGetRoomClasses.get("room_classes"), new TypeToken<List<RoomClass>>(){}.getType());
+                            hotelRoomClassId = hotelRoomClassList.get(0).getRoomClassId().substring(hotelRoomClassList.get(0).getRoomClassId().indexOf("suns"),9);
+                        } else {
+                            // having problem to get all room-class of hotel
                         }
+                        //</editor-fold>
 
+                        if (!_promotionContainer.getPromotions().isEmpty()) {
+                            for (_Promotion _promotion : _promotionContainer.getPromotions()) {
+                                Boolean isPromotionProblem;
+                                //<editor-fold desc="Check Promotion Exist">
+                                Boolean isExistPromotion;
+                                JsonObject jsonGetPromotionResponse = new Gson().fromJson(doHttpGetClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" +
+                                        _promotionContainer.getHotelServiceId().substring(_promotionContainer.getHotelServiceId().indexOf("suns")) + "/promotion-containers/" +
+                                        _promotionContainer.getId() + "/promotions?token=" + loginToken), JsonObject.class);
+                                if (jsonGetPromotionResponse.get("status").toString().replaceAll("\"","").equals("SUCCESS") &&
+                                        (jsonGetPromotionResponse.get("result").getAsJsonObject().get("promotions") != null)) {
+                                    List<Promotion> checkExistPromotion = new Gson().fromJson(jsonGetPromotionResponse.get("result").getAsJsonObject().get("promotions"), new TypeToken<List<Promotion>>(){}.getType());
+                                    if (checkExistPromotion.stream().anyMatch(_p -> _p.getId().equals(_promotion.getId()))) {
+                                        isExistPromotion = true;
+                                    } else {
+                                        isExistPromotion = false;
+                                    }
+                                } else {
+                                    isExistPromotion = false;
+                                }
+                                //</editor-fold>
+                                if (!isExistPromotion) {
+                                    switch (_promotion.getO().toString()) {
+                                        case "Sunseries::Domain::Model::FreeProductPromotion":
+                                            FreeProductPromotion freeProductPromotion = new FreeProductPromotion();
+                                            freeProductPromotion.setType("free_product");
+                                            isPromotionProblem = transformPromotionGeneric(_promotion, freeProductPromotion, hotelRoomClassList, promotionDataProblemFile);
+
+                                            if (!StringUtils.isEmpty(_promotion.getSpec())) {
+                                                _Spec _spec = new Gson().fromJson(new Gson().toJson(_promotion.getSpec()), _Spec.class);
+                                                if (!StringUtils.isEmpty(_spec.getArgs().getO()) && (_spec.getArgs().getO().equals("ActiveSupport::HashWithIndifferentAccess"))) {
+                                                    //<editor-fold desc="args == HashWithIndifferentAccess">
+                                                    if (!StringUtils.isEmpty(_spec.getArgs().getSelf().get("products"))) {
+                                                        if (freeProductPromotion.getFreeProductSpecifications() == null) {
+                                                            freeProductPromotion.setFreeProductSpecifications(new ArrayList<>());
+                                                        }
+                                                        ((List<String>) _spec.getArgs().getSelf().get("products")).stream().forEach(_product -> freeProductPromotion.getFreeProductSpecifications().add(_product.toString().replaceAll("\"", "")));
+                                                    } else {
+                                                        isPromotionProblem = true;
+                                                    }
+                                                    //</editor-fold>
+                                                } else {
+                                                    //<editor-fold desc="args == Map">
+                                                    Map<String, Object> mapArgs = new Gson().fromJson(new Gson().toJson(_promotion.getSpec().get("args")), Map.class);
+                                                    if (!StringUtils.isEmpty(mapArgs.get(":products")) && !((List) mapArgs.get(":products")).isEmpty()) {
+                                                        freeProductPromotion.setFreeProductSpecifications(new ArrayList<>());
+                                                        ((List<String>) mapArgs.get(":products")).forEach(_product -> freeProductPromotion.getFreeProductSpecifications().add(_product.toString().replaceAll("\"", "")));
+                                                    } else {
+                                                        isPromotionProblem = true;
+                                                    }
+                                                    //</editor-fold>
+                                                }
+                                            }
+
+                                            //<editor-fold desc="RestAPI to create FreeProductPromotion">
+                                            if (!isPromotionProblem) {
+                                                String payload2 = "{\"type\":\"create_hotel_promotion\",\"origin\":\"ms-load-data\",\"event_data\":{\"promotion\": " + new Gson().toJson(freeProductPromotion) + "}}";
+                                                JsonObject jsonAddPromotionResponse = new Gson().fromJson(
+                                                        doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotelRoomClassId + "/promotion-containers/" +
+                                                                _promotionContainer.getId() + "/promotions?token=" + loginToken, payload2), JsonObject.class);
+                                                System.out.println("hotel_id: " + hotelRoomClassId + ", promotion_container_id: " + _promotionContainer.getId() +
+                                                        ", promotion_id: " + jsonAddPromotionResponse.get("id").toString() + ", status: " + jsonAddPromotionResponse.get("status").toString());
+                                                sleep(50);
+                                            } else {
+                                                // Todo :: check which problem
+                                                System.out.println("problem");
+                                            }
+                                            //</editor-fold>
+                                            break;
+                                        case "Sunseries::Domain::Model::FreeUpgradePromotion":
+                                            break;
+                                        case "Sunseries::Domain::Model::FreeNightWithBonusRatePromotion":
+                                            break;
+                                        case "Sunseries::Domain::Model::FreeNightPromotion":
+                                            FreeNightPromotion freeNightPromotion = new FreeNightPromotion();
+                                            freeNightPromotion.setType("free_night");
+                                            isPromotionProblem = transformPromotionGeneric(_promotion, freeNightPromotion, hotelRoomClassList, promotionDataProblemFile);
+
+                                            if (!StringUtils.isEmpty(_promotion.getSpec())) {
+                                                _HashWithIndifferentAccess _args = getHashIndifferentAccessObject(_promotion.getSpec().get("args"));
+                                                if (_args.getO() != null) {
+                                                    //<editor-fold desc="args == HashWithIndifferentAccess">
+                                                    if (!StringUtils.isEmpty(_args.getSelf().get("currency_code"))) {
+                                                        freeNightPromotion.setCurrencyCode(_args.getSelf().get("currency_code").toString());
+                                                    } else {
+                                                        isPromotionProblem = true;
+                                                    }
+                                                    if (!StringUtils.isEmpty(_args.getSelf().get("free_nights"))) {
+                                                        freeNightPromotion.setFreeNights(convertObjectToInt(_args.getSelf().get("free_nights")));
+                                                    } else {
+                                                        isPromotionProblem = true;
+                                                    }
+                                                    if (!StringUtils.isEmpty(_args.getSelf().get("paid_nights"))) {
+                                                        freeNightPromotion.setPaidNights(convertObjectToInt(_args.getSelf().get("paid_nights")));
+                                                    } else {
+                                                        isPromotionProblem = true;
+                                                    }
+                                                    if (!StringUtils.isEmpty(_args.getSelf().get("rate_table"))) {
+                                                        List<FreeNightRateSpecification> freeNightRateSpecificationList = new ArrayList<>();
+                                                        _HashWithIndifferentAccess _rate_table = new Gson().fromJson(new Gson().toJson(_args.getSelf().get("rate_table")), _HashWithIndifferentAccess.class);
+                                                        if (_rate_table.getO() != null) {
+                                                            if (!_rate_table.getSelf().isEmpty()) {
+                                                                for (String _roomClassName : _rate_table.getSelf().keySet()) {
+                                                                    Boolean isFreeNightSpecProblem = false;
+                                                                    _HashWithIndifferentAccess _roomPromotionSpec = getHashIndifferentAccessObject(_rate_table.getSelf().get(_roomClassName));
+                                                                    if (_roomPromotionSpec.getO() != null) {
+                                                                        //<editor-fold desc="transform FreeNightSpec">
+                                                                        if (StringUtils.isEmpty(_roomPromotionSpec.getSelf().get("breakfast_applicibility"))) {
+                                                                           isFreeNightSpecProblem = true;
+                                                                        } else {
+                                                                            if (_roomPromotionSpec.getSelf().get("breakfast_applicibility").equals("compulsory")) {
+                                                                                if (StringUtils.isEmpty(_roomPromotionSpec.getSelf().get("breakfast"))) {
+                                                                                    isFreeNightSpecProblem = true;
+                                                                                    writeToFileApacheCommonIO("FreeNight - compulsary not specify room_rate: " + hotelRoomClassId + ", promotion_id: " + _promotion.getId() + System.lineSeparator(), promotionDataProblemFile);
+                                                                                } else {
+                                                                                    // normal
+                                                                                }
+                                                                            } else {
+                                                                                if (!StringUtils.isEmpty(_roomPromotionSpec.getSelf().get("breakfast"))) {
+                                                                                    isFreeNightSpecProblem = true;
+                                                                                    writeToFileApacheCommonIO("FreeNight - free but specify room_rate: " + hotelRoomClassId + ", promotion_id: " + _promotion.getId() + System.lineSeparator(), promotionDataProblemFile);
+                                                                                } else {
+                                                                                    // normal
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                        if (StringUtils.isEmpty(_roomPromotionSpec.getSelf().get("extra_bed_is_free"))) {
+                                                                            // normal --> means extra_bed_is_free = false;
+                                                                        }
+                                                                        if (StringUtils.isEmpty(_roomPromotionSpec.getSelf().get("extra_bed_includes_breakfast"))) {
+                                                                            // normal --> means extra_bed_includes_breakfast = false;
+                                                                        }
+                                                                        //</editor-fold>
+
+                                                                        if (!isFreeNightSpecProblem) {
+                                                                            freeNightRateSpecificationList.add(new FreeNightRateSpecification(
+                                                                                    _roomClassName.substring(_roomClassName.indexOf("suns")),
+                                                                                    (_roomPromotionSpec.getSelf().get("breakfast_applicibility").toString().equals("free"))? "0":_roomPromotionSpec.getSelf().get("breakfast").toString(),
+                                                                                    _roomPromotionSpec.getSelf().get("breakfast_applicibility").toString(),
+                                                                                    transformBooleanObject(_roomPromotionSpec.getSelf().get("extra_bed_is_free")),
+                                                                                    transformBooleanObject(_roomPromotionSpec.getSelf().get("extra_bed_includes_breakfast"))));
+                                                                        } else {
+                                                                            isPromotionProblem = true;
+                                                                        }
+                                                                    } else {
+                                                                        System.out.print("free_night_spec not hash");
+                                                                    }
+                                                                }
+                                                            } else {
+                                                                System.out.print("rate_table is empty-list");
+                                                            }
+                                                        } else {
+                                                            System.out.println("rate_table not Hash");
+                                                        }
+
+                                                        freeNightPromotion.setFreeNightRateSpecifications(freeNightRateSpecificationList);
+                                                    } else {
+                                                        isPromotionProblem = true;
+                                                    }
+                                                    //</editor-fold>
+                                                } else {
+                                                    isPromotionProblem = true;
+
+                                                }
+                                            }
+
+                                            //<editor-fold desc="check valid FreeNights-PaidNights">
+                                            if (!isPromotionProblem) {
+                                                Integer sum = freeNightPromotion.getFreeNights() + freeNightPromotion.getPaidNights();
+                                                if (!StringUtils.isEmpty(freeNightPromotion.getMinimumNightStay()) && !freeNightPromotion.getMinimumNightStay().equals(sum)) {
+                                                    isPromotionProblem = true;
+                                                    writeToFileApacheCommonIO("minimum_night_stay (inside/total):" + hotelRoomClassId +
+                                                            ", promotion_id: " + _promotion.getId() + System.lineSeparator(), promotionDataProblemFile);
+                                                }
+                                                if (!StringUtils.isEmpty(freeNightPromotion.getMinimumNightStayInsidePromotion()) && !freeNightPromotion.getMinimumNightStayInsidePromotion().equals(sum)) {
+                                                    isPromotionProblem = true;
+                                                    writeToFileApacheCommonIO("minimum_night_stay (inside/total):" + hotelRoomClassId +
+                                                            ", promotion_id: " + _promotion.getId() + System.lineSeparator(), promotionDataProblemFile);
+                                                }
+                                            }
+                                            //</editor-fold>
+
+                                            //<editor-fold desc="RestAPI to create FreeNightPromotion">
+                                            //if (!isPromotionProblem) {
+                                            if (0==1) {
+                                                String payload2 = "{\"type\":\"create_hotel_promotion\",\"origin\":\"ms-load-data\",\"event_data\":{\"promotion\": " + new Gson().toJson(freeNightPromotion) + "}}";
+                                                JsonObject jsonAddPromotionResponse = new Gson().fromJson(
+                                                        doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotelRoomClassId + "/promotion-containers/" +
+                                                                _promotionContainer.getId() + "/promotions?token=" + loginToken, payload2), JsonObject.class);
+                                                System.out.println("hotel_id: " + hotelRoomClassId + ", promotion_container_id: " + _promotionContainer.getId() +
+                                                        ", promotion_id: " + jsonAddPromotionResponse.get("id").toString() + ", status: " + jsonAddPromotionResponse.get("status").toString());
+                                                sleep(50);
+                                            } else {
+                                                // Todo :: check which problem
+                                                System.out.println("temporary problem --> no mention");
+                                            }
+                                            //</editor-fold>
+                                            break;
+                                        case "Sunseries::Domain::Model::RoomNightsPackagePromotion":
+                                            break;
+                                        case "Sunseries::Domain::Model::PercentageDiscountPromotion":
+                                            break;
+                                        case "Sunseries::Domain::Model::FlatRatePromotion":
+                                            break;
+                                        default:
+                                            break;
+                                    }
+                                }
+                            }
+                        }
                     }
                     //</editor-fold>
                 }
@@ -951,6 +1084,275 @@ public class Application {
         System.out.println(", BackendHotel miss match id: " + backendHotelMetadataMissMatchCounter);
     }
 
+    private static Boolean transformBooleanObject(Object _object) {
+        Boolean retBool;
+        if (_object != null && !StringUtils.isEmpty(_object.toString())) {
+            retBool = Boolean.parseBoolean(_object.toString());
+        } else {
+            retBool = false;
+        }
+        return retBool;
+    }
+
+    private static _HashWithIndifferentAccess getHashIndifferentAccessObject(Object _object) {
+        return new Gson().fromJson(new Gson().toJson(_object), _HashWithIndifferentAccess.class);
+    }
+
+    private static Boolean transformPromotionGeneric(_Promotion _promotion, Promotion promotion, List<RoomClass> roomClassList, File promotionDataProblemFile) {
+        Boolean retBool = false;
+        if (!StringUtils.isEmpty(_promotion.getId())) {
+            promotion.setId(_promotion.getId());
+        } else {
+            retBool = true;
+        }
+        if (!StringUtils.isEmpty(_promotion.getBlackoutPeriod()) && !_promotion.getBlackoutPeriod().isEmpty()) {
+            promotion.setBlackoutPeriods(new ArrayList<>());
+            for (_BlackoutPeriod _period : _promotion.getBlackoutPeriod()) {
+                BlackoutPeriod blackoutPeriod = new BlackoutPeriod();
+                blackoutPeriod.setRoomClass(new ArrayList<>());
+                blackoutPeriod.setBlackoutFrom(transformOldDateToString(_period.getPeriod().getFrom()));
+                blackoutPeriod.setBlackoutTo(transformOldDateToString(_period.getPeriod().getTo()));
+                if (_period.getRoomClassIds() == null) {
+                    if (roomClassList != null) {
+                        roomClassList.forEach(roomClass -> blackoutPeriod.getRoomClass().add(roomClass.getRoomClassId()));
+                    } else {
+                        retBool = true;
+                    }
+                } else {
+                    _period.getRoomClassIds().stream().forEach(_roomClass -> blackoutPeriod.getRoomClass().add(_roomClass.substring(_roomClass.indexOf("suns"))));
+                }
+                promotion.getBlackoutPeriods().add(blackoutPeriod);
+            }
+        } else {
+            // normal
+        }
+        if (!StringUtils.isEmpty(_promotion.getActions()) && (!_promotion.getActions().isEmpty())) {
+            System.out.println("something to do");
+        }
+        if (!StringUtils.isEmpty(_promotion.getChecks()) && (!_promotion.getChecks().isEmpty())) {
+            System.out.println("something to do");
+        }
+        if (!StringUtils.isEmpty(_promotion.getSpec())) {
+            _Spec _spec = new Gson().fromJson(new Gson().toJson(_promotion.getSpec()), _Spec.class);
+            if (!StringUtils.isEmpty(_spec.getCode())) {
+                promotion.setCode(_spec.getCode());
+            } else {
+                if (!StringUtils.isEmpty(_spec.getInternalCode())) {
+                    promotion.setCode(_spec.getInternalCode());
+                } else {
+                    // normal code can be empty
+                }
+            }
+            if (!StringUtils.isEmpty(_spec.getForcedCombinable())) {
+                promotion.setForceCombine(_spec.getForcedCombinable());
+            }
+            if (!StringUtils.isEmpty(_spec.getExclusive())) {
+                promotion.setExclusiveCombine(_spec.getExclusive());
+            }
+            if (!StringUtils.isEmpty(_spec.getInflexible())) {
+                promotion.setInflexible(_spec.getInflexible());
+            }
+            if (!StringUtils.isEmpty(_spec.getApplicablePeriod().getFrom())) {
+                promotion.setApplicableFrom(transformOldDateToString(_spec.getApplicablePeriod().getFrom()));
+            } else {
+                retBool = true;
+            }
+            if (!StringUtils.isEmpty(_spec.getApplicablePeriod().getTo())) {
+                promotion.setApplicableTo(transformOldDateToString(_spec.getApplicablePeriod().getTo()));
+            } else {
+                retBool = true;
+            }
+            if (!StringUtils.isEmpty(_spec.getApplicableDays())) {
+                promotion.setApplicableDaysOfWeek(_spec.getApplicableDays());
+            } else {
+                retBool = true;
+            }
+            if (!StringUtils.isEmpty(_spec.getMarket())) {
+                promotion.setMarket(_spec.getMarket());
+            } else {
+                retBool = true;
+            }
+            if (!StringUtils.isEmpty(_spec.getEarlyBird())) {
+                if (_spec.getEarlyBird()) {
+                    if (!StringUtils.isEmpty(_spec.getEarlybirdDaysInAdvance())) {
+                        promotion.setEarlyBirdsDays(convertObjectToInt(_spec.getEarlybirdDaysInAdvance()));
+                    } else {
+                        retBool = true;
+                    }
+                }
+            }
+            if (!StringUtils.isEmpty(_spec.getBookByDate())) {
+                promotion.setBookByDate(transformOldDateToString(_spec.getBookByDate()));
+            }
+            if (!StringUtils.isEmpty(_spec.getMaximumAppliedNights())) {
+                promotion.setMaximumAppliedNights(convertObjectToInt(_spec.getMaximumAppliedNights()));
+            }
+            if (!StringUtils.isEmpty(_spec.getMaximumNightStay())) {
+                promotion.setMaximumNightStay(convertObjectToInt(_spec.getMaximumNightStay()));
+            }
+            // Todo :: double check again
+            if (!StringUtils.isEmpty(_spec.getTotalQualifyingNights())) {
+                promotion.setMinimumNightStay(convertObjectToInt(_spec.getTotalQualifyingNights()));
+            }
+            // Todo :: double check again
+            if (!StringUtils.isEmpty(_spec.getQualifyingNight())) {
+                promotion.setMinimumNightStayInsidePromotion(convertObjectToInt(_spec.getQualifyingNight()));
+            }
+            if (!StringUtils.isEmpty(_spec.getMinimumRooms())) {
+                promotion.setMinimumRooms(convertObjectToInt(_spec.getMinimumRooms()));
+            }
+            if (!StringUtils.isEmpty(_spec.getRoomClasses()) && !_spec.getRoomClasses().isEmpty()) {
+                promotion.setApplicableRoomClass(new ArrayList<>());
+                _spec.getRoomClasses().stream().forEach(_roomClass -> promotion.getApplicableRoomClass().add(_roomClass.substring(_roomClass.indexOf("suns"))));
+            } else {
+                // jack confirm that means apply all roomClass
+                if (roomClassList != null) {
+                    promotion.setApplicableRoomClass(new ArrayList<>());
+                    roomClassList.forEach(roomClass -> promotion.getApplicableRoomClass().add(roomClass.getRoomClassId()));
+                } else {
+                    retBool = true;
+                }
+            }
+            if (!StringUtils.isEmpty(_spec.getArgs().getO()) && (_spec.getArgs().getO().equals("ActiveSupport::HashWithIndifferentAccess"))) {
+                //<editor-fold desc="args == HashWithIndifferentAccess">
+                //<editor-fold desc="args.charge transform">
+                if (!StringUtils.isEmpty(_spec.getArgs().getSelf().get("charge")) && !((List) _spec.getArgs().getSelf().get("charge")).isEmpty()) {
+                    // args.charge not empty and not empty-list
+                    if (((List<Map<String, Object>>) _spec.getArgs().getSelf().get("charge")).get(0).get("^o").equals("ActiveSupport::HashWithIndifferentAccess")) {
+                        // args.charge == HashWithIndifferentAccess
+                        List<PromotionCharge> promotionChargeList = new ArrayList<>();
+                        List<_HashWithIndifferentAccess> _promotionChargeList = new Gson().fromJson(new Gson().toJson(_spec.getArgs().getSelf().get("charge")), new TypeToken<List<_HashWithIndifferentAccess>>() {
+                        }.getType());
+                        if (transformPromotionChargeListHashIndifferentAccess(_promotionChargeList, promotionChargeList)) {
+                            promotion.setPromotionCharges(promotionChargeList);
+                        } else {
+                            System.out.println("problem with promotionChargeList");
+                            retBool = true;
+                        }
+                    } else {
+                        // args.charge <> HashWithIndifferentAccess
+                        System.out.println("problem");
+                        retBool = true;
+                    }
+                } else {
+                    // args.charge = [] --> normal
+                }
+                //</editor-fold>
+                if (!StringUtils.isEmpty(_spec.getArgs().getSelf().get("charge_currency_code"))) {
+                    promotion.setCurrencyCode(_spec.getArgs().getSelf().get("charge_currency_code").toString().replaceAll("\"", ""));
+                } else {
+                    retBool = true;
+                }
+                //</editor-fold>
+            } else {
+                //<editor-fold desc="args == Map">
+                Map<String, Object> mapArgs = new Gson().fromJson(new Gson().toJson(_promotion.getSpec().get("args")), Map.class);
+                //<editor-fold desc="args.charge transform">
+                if (!StringUtils.isEmpty(mapArgs.get(":charge")) && !((List) mapArgs.get(":charge")).isEmpty()) {
+                    // args.charge not empty and not empty-list
+                    if (((List<Map<String, Object>>) mapArgs.get(":charge")).get(0).get("^o").equals("ActiveSupport::HashWithIndifferentAccess")) {
+                        // args.charge == HashWithIndifferentAccess
+                        List<PromotionCharge> promotionChargeList = new ArrayList<>();
+                        List<_HashWithIndifferentAccess> _promotionChargeList = new Gson().fromJson(new Gson().toJson(mapArgs.get(":charge")), new TypeToken<List<_HashWithIndifferentAccess>>() {
+                        }.getType());
+                        if (transformPromotionChargeListHashIndifferentAccess(_promotionChargeList, promotionChargeList)) {
+                            promotion.setPromotionCharges(promotionChargeList);
+                        } else {
+                            System.out.println("problem with promotionChargeList");
+                            retBool = true;
+                        }
+                    } else {
+                        // args.charge <> HashWithIndifferentAccess
+                        System.out.println("problem");
+                        retBool = true;
+                    }
+                } else {
+                    // args.charge = [] --> normal
+                }
+                //</editor-fold>
+                if (!StringUtils.isEmpty(mapArgs.get(":charge_currency_code"))) {
+                    promotion.setCurrencyCode(mapArgs.get(":charge_currency_code").toString());
+                } else {
+                    retBool = true;
+                }
+                //</editor-fold>
+            }
+        } else {
+            // spec not specify
+            retBool = true;
+        }
+
+        //<editor-fold desc="check valid mininumNightStay">
+        if (!StringUtils.isEmpty(promotion.getMinimumNightStay()) && !StringUtils.isEmpty(promotion.getMinimumNightStayInsidePromotion())) {
+            retBool = true;
+            writeToFileApacheCommonIO("minimum_night_stay (inside/total):" + roomClassList.get(0).getRoomClassId().substring(roomClassList.get(0).getRoomClassId().indexOf("suns"),9) +
+                    ", promotion_id: " + _promotion.getId() + System.lineSeparator(), promotionDataProblemFile);
+        }
+        //</editor-fold>
+
+        return retBool;
+    }
+
+    private static boolean transformPromotionChargeListHashIndifferentAccess(List<_HashWithIndifferentAccess> _promotionChargeList, List<PromotionCharge> promotionChargeList) {
+        Boolean returnBool = false;
+        for (_HashWithIndifferentAccess _charge : _promotionChargeList) {
+            //<editor-fold desc="promotion_charge transform">
+            _PromotionCharge _promotionCharge = new Gson().fromJson(new Gson().toJson(_charge.getSelf()), _PromotionCharge.class);
+            PromotionCharge promotionCharge = new PromotionCharge();
+            Boolean isPromotionChargeProblem = false;
+            if (!StringUtils.isEmpty(_promotionCharge.getName())) {
+                promotionCharge.setName(_promotionCharge.getName());
+            } else {
+                isPromotionChargeProblem = true;
+            }
+            if (!StringUtils.isEmpty(_promotionCharge.getAmount())) {
+                promotionCharge.setAmount(String.format("%1.2f", _promotionCharge.getAmount().getSatang() / 100.0));
+            } else {
+                isPromotionChargeProblem = true;
+            }
+            if (!StringUtils.isEmpty(_promotionCharge.getRequired())) {
+                promotionCharge.setRequirement(_promotionCharge.getRequired().replaceAll(":", ""));
+            } else {
+                isPromotionChargeProblem = true;
+            }
+            if (!StringUtils.isEmpty(_promotionCharge.getApplicationCriteria())) {
+                promotionCharge.setAppliesTo(_promotionCharge.getApplicationCriteria().replaceAll(":", ""));
+            } else {
+                isPromotionChargeProblem = true;
+            }
+            if (!StringUtils.isEmpty(_promotionCharge.getAppliesEvery())) {
+                promotionCharge.setAppliesEvery(_promotionCharge.getAppliesEvery().replaceAll(":", ""));
+            } else {
+                isPromotionChargeProblem = true;
+            }
+            if (!StringUtils.isEmpty(_promotionCharge.getRoomClasses())) {
+                if (!_promotionCharge.getRoomClasses().isEmpty()) {
+                    promotionCharge.setRoomClass(new ArrayList<>());
+                    _promotionCharge.getRoomClasses().forEach(_roomClass -> promotionCharge.getRoomClass().add(_roomClass.substring(_roomClass.indexOf("suns"))));
+                } else {
+                    // applicable room_class for promotion_charge is empty-list --> normal
+                }
+            } else {
+                // not specify which room_class to apply for promotion charge --> normal
+            }
+            if (!StringUtils.isEmpty(_promotionCharge.getMarkup())) {
+                promotionCharge.setMarkup(_promotionCharge.getMarkup());
+                promotionCharge.setType("custom_markup_strategy");
+            } else {
+                // no specify markup --> normal
+            }
+            //</editor-fold>
+            if (!isPromotionChargeProblem) {
+                promotionChargeList.add(promotionCharge);
+                returnBool = true;
+            } else {
+                System.out.println("problem with some promotion_charge");
+                returnBool = false;
+            }
+        }
+        return returnBool;
+    }
+
     private static String transformOldDateToString(Object date) {
         if (!StringUtils.isEmpty(date)) {
             if (date.getClass().equals(String.class)) {
@@ -960,7 +1362,7 @@ public class Application {
                 return _date.toString();
             }
         }
-        return "date-have-problem";
+        return "date_have_problem";
     }
 
     private static Integer convertObjectToInt(Object numberKeepAsString) {
