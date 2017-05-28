@@ -878,6 +878,7 @@ public class Application {
                                 if (!isExistPromotion) {
                                     switch (_promotion.getO().toString()) {
                                         case "Sunseries::Domain::Model::FreeProductPromotion":
+                                            //<editor-fold desc="FreeProduct">
                                             FreeProductPromotion freeProductPromotion = new FreeProductPromotion();
                                             freeProductPromotion.setType("free_product");
                                             isPromotionProblem = transformPromotionGeneric(_promotion, freeProductPromotion, hotelId, hotelRoomClassList, promotionDataProblemFile);
@@ -922,8 +923,10 @@ public class Application {
                                                 System.out.println("problem");
                                             }
                                             //</editor-fold>
+                                            //</editor-fold>
                                             break;
                                         case "Sunseries::Domain::Model::FreeUpgradePromotion":
+                                            //<editor-fold desc="FreeUpgrade">
                                             FreeUpgradePromotion freeUpgradePromotion = new FreeUpgradePromotion();
                                             freeUpgradePromotion.setType("free_upgrade");
                                             isPromotionProblem = transformPromotionGeneric(_promotion, freeUpgradePromotion, hotelId, hotelRoomClassList, promotionDataProblemFile);
@@ -966,10 +969,12 @@ public class Application {
                                                 System.out.println("temporary problem --> no mention");
                                             }
                                             //</editor-fold>
+                                            //</editor-fold>
                                             break;
                                         case "Sunseries::Domain::Model::FreeNightWithBonusRatePromotion":
                                             break;
                                         case "Sunseries::Domain::Model::FreeNightPromotion":
+                                            //<editor-fold desc="FreeNight">
                                             FreeNightPromotion freeNightPromotion = new FreeNightPromotion();
                                             freeNightPromotion.setType("free_night");
                                             isPromotionProblem = transformPromotionGeneric(_promotion, freeNightPromotion, hotelId, hotelRoomClassList, promotionDataProblemFile);
@@ -1060,12 +1065,14 @@ public class Application {
                                                 System.out.println("temporary problem --> no mention");
                                             }
                                             //</editor-fold>
+                                            //</editor-fold>
                                             break;
                                         case "Sunseries::Domain::Model::RoomNightsPackagePromotion":
                                             break;
                                         case "Sunseries::Domain::Model::PercentageDiscountPromotion":
                                             break;
                                         case "Sunseries::Domain::Model::FlatRatePromotion":
+                                            //<editor-fold desc="FlatRate">
                                             FlatRatePromotion flatRatePromotion = new FlatRatePromotion();
                                             flatRatePromotion.setType("flat_rate");
                                             isPromotionProblem = transformPromotionGeneric(_promotion, flatRatePromotion, hotelId, hotelRoomClassList, promotionDataProblemFile);
@@ -1121,6 +1128,7 @@ public class Application {
                                                 // Todo :: check which problem
                                                 System.out.println("temporary problem --> no mention");
                                             }
+                                            //</editor-fold>
                                             //</editor-fold>
                                             break;
                                         default:
