@@ -972,6 +972,98 @@ public class Application {
                                             //</editor-fold>
                                             break;
                                         case "Sunseries::Domain::Model::FreeNightWithBonusRatePromotion":
+                                            //<editor-fold desc="FreeNightWithBonusRate">
+                                            FreeNightWithBonusRatePromotion freeNightWithBonusRatePromotion = new FreeNightWithBonusRatePromotion();
+                                            freeNightWithBonusRatePromotion.setType("free_night_with_bonus_rate");
+                                            isPromotionProblem = transformPromotionGeneric(_promotion, freeNightWithBonusRatePromotion, hotelId, hotelRoomClassList, promotionDataProblemFile);
+
+                                            if (!StringUtils.isEmpty(_promotion.getSpec())) {
+                                                _HashWithIndifferentAccess _args = getHashIndifferentAccessObject(_promotion.getSpec().get("args"));
+                                                if (_args.getO() != null) {
+                                                    //<editor-fold desc="args == HashWithIndifferentAccess">
+                                                    if (!StringUtils.isEmpty(_args.getSelf().get("currency_code"))) {
+                                                        freeNightWithBonusRatePromotion.setCurrencyCode(_args.getSelf().get("currency_code").toString());
+                                                    } else {
+                                                        isPromotionProblem = true;
+                                                    }
+                                                    if (!StringUtils.isEmpty(_args.getSelf().get("free_nights"))) {
+                                                        freeNightWithBonusRatePromotion.setFreeNights(convertObjectToInt(_args.getSelf().get("free_nights")));
+                                                    } else {
+                                                        isPromotionProblem = true;
+                                                    }
+                                                    if (!StringUtils.isEmpty(_args.getSelf().get("paid_nights"))) {
+                                                        freeNightWithBonusRatePromotion.setPaidNights(convertObjectToInt(_args.getSelf().get("paid_nights")));
+                                                    } else {
+                                                        isPromotionProblem = true;
+                                                    }
+                                                    if (!StringUtils.isEmpty(_args.getSelf().get("rate_table"))) {
+                                                        List<FreeNightRateSpecification> freeNightRateSpecificationList = new ArrayList<>();
+                                                        _HashWithIndifferentAccess _rate_table = new Gson().fromJson(new Gson().toJson(_args.getSelf().get("rate_table")), _HashWithIndifferentAccess.class);
+                                                        isPromotionProblem = transformHashRateTable(freeNightRateSpecificationList, _rate_table, hotelId, _promotion.getId(), freeNightWithBonusRatePromotion.getCurrencyCode(), promotionDataProblemFile);
+                                                        freeNightWithBonusRatePromotion.setFreeNightRateSpecifications(freeNightRateSpecificationList);
+                                                    } else {
+                                                        isPromotionProblem = true;
+                                                    }
+                                                    //</editor-fold>
+                                                } else {
+                                                    //<editor-fold desc="args == Map">
+                                                    Map<String, Object> _mapArgs = new Gson().fromJson(new Gson().toJson(_promotion.getSpec().get("args")), Map.class);
+                                                    if (!StringUtils.isEmpty(_mapArgs.get(":currency_code"))) {
+                                                        freeNightWithBonusRatePromotion.setCurrencyCode(_mapArgs.get(":currency_code").toString());
+                                                    } else {
+                                                        isPromotionProblem = true;
+                                                    }
+                                                    if (!StringUtils.isEmpty(_mapArgs.get(":free_nights"))) {
+                                                        freeNightWithBonusRatePromotion.setFreeNights(convertObjectToInt(_mapArgs.get(":free_nights")));
+                                                    } else {
+                                                        isPromotionProblem = true;
+                                                    }
+                                                    if (!StringUtils.isEmpty(_mapArgs.get(":paid_nights"))) {
+                                                        freeNightWithBonusRatePromotion.setPaidNights(convertObjectToInt(_mapArgs.get(":paid_nights")));
+                                                    } else {
+                                                        isPromotionProblem = true;
+                                                    }
+                                                    if (!StringUtils.isEmpty(_mapArgs.get(":rate_table"))) {
+                                                        List<FreeNightRateSpecification> freeNightRateSpecificationList = new ArrayList<>();
+                                                        _HashWithIndifferentAccess _rate_table = new Gson().fromJson(new Gson().toJson(_mapArgs.get(":rate_table")), _HashWithIndifferentAccess.class);
+                                                        isPromotionProblem = transformHashRateTable(freeNightRateSpecificationList, _rate_table, hotelId, _promotion.getId(), freeNightWithBonusRatePromotion.getCurrencyCode(), promotionDataProblemFile);
+                                                        freeNightWithBonusRatePromotion.setFreeNightRateSpecifications(freeNightRateSpecificationList);
+                                                    } else {
+                                                        isPromotionProblem = true;
+                                                    }
+                                                    //</editor-fold>
+                                                }
+                                            }
+
+                                            //<editor-fold desc="check valid FreeNights-PaidNights">
+                                            if (!isPromotionProblem) {
+                                                Integer sum = freeNightWithBonusRatePromotion.getFreeNights() + freeNightWithBonusRatePromotion.getPaidNights();
+                                                if (!StringUtils.isEmpty(freeNightWithBonusRatePromotion.getMinimumNightStay()) && !freeNightWithBonusRatePromotion.getMinimumNightStay().equals(sum)) {
+                                                    writeToFileApacheCommonIO("minimum_night_stay (inside/total):" + hotelId +
+                                                            ", promotion_id: " + _promotion.getId() + System.lineSeparator(), promotionDataProblemFile);
+                                                }
+                                                if (!StringUtils.isEmpty(freeNightWithBonusRatePromotion.getMinimumNightStayInsidePromotion()) && !freeNightWithBonusRatePromotion.getMinimumNightStayInsidePromotion().equals(sum)) {
+                                                    writeToFileApacheCommonIO("minimum_night_stay (inside/total):" + hotelId +
+                                                            ", promotion_id: " + _promotion.getId() + System.lineSeparator(), promotionDataProblemFile);
+                                                }
+                                            }
+                                            //</editor-fold>
+
+                                            //<editor-fold desc="RestAPI to create FreeNightPromotion">
+                                            if (!isPromotionProblem) {
+                                                String payload2 = "{\"type\":\"create_hotel_promotion\",\"origin\":\"ms-load-data\",\"event_data\":{\"promotion\": " + new Gson().toJson(freeNightWithBonusRatePromotion) + "}}";
+                                                JsonObject jsonAddPromotionResponse = new Gson().fromJson(
+                                                        doHttpPostClient("http://" + serverHost + ":" + serverPort + "/sunseries/v1/hotels/" + hotelId + "/promotion-containers/" +
+                                                                _promotionContainer.getId() + "/promotions?token=" + loginToken, payload2), JsonObject.class);
+                                                System.out.println("hotel_id: " + hotelId + ", promotion_container_id: " + _promotionContainer.getId() +
+                                                        ", promotion_id: " + jsonAddPromotionResponse.get("id").toString() + ", status: " + jsonAddPromotionResponse.get("status").toString());
+                                                sleep(50);
+                                            } else {
+                                                // Todo :: check which problem
+                                                System.out.println("temporary problem --> no mention");
+                                            }
+                                            //</editor-fold>
+                                            //</editor-fold>
                                             break;
                                         case "Sunseries::Domain::Model::FreeNightPromotion":
                                             //<editor-fold desc="FreeNight">
